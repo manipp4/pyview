@@ -38,7 +38,8 @@ class Datacube(Subject,Observer,Reloadable):
   """
   defaults = dict()
 
-  version = "0.2"
+  version = "0.3"
+#  version = "0.2"
   
   def __init__(self,*args,**kwargs):
     Subject.__init__(self)
@@ -679,7 +680,7 @@ class Datacube(Subject,Observer,Reloadable):
       file.write(line)
     file.close()
   
-  def savetxt(self,path = None,saveChildren = True,overwrite = False,forceSave = False,allInOneFile = False):
+  def savetxt(self,path = None, absPath=None, saveChildren = True,overwrite = False,forceSave = False,allInOneFile = False, forceFolders=False):
 
     """
     Saves the datacube to a text file
@@ -699,7 +700,7 @@ class Datacube(Subject,Observer,Reloadable):
     filename = self._sanitizeFilename(filename)
     #We determine the basename of the file to which we want to save the datacube.
     basename = filename
-
+    
     cnt = 1
 
     if overwrite == False:
@@ -711,23 +712,52 @@ class Datacube(Subject,Observer,Reloadable):
     savepath = directory+"/"+savename
     parpath = directory+"/"+basename+".par"
 
-    children = []
+    children=[]
+    if float(Datacube.version)>="0.3" or forceFolders:
+      print "saving in new version"
+      if saveChildren:
+        
+        for i in range(0,len(self._children)):
+          item = self._children[i]
+          child = item.datacube()
+          if child.name() != None:
+            childfilename = basename+"-"+child.name()+("-%d" % (i))
+          else:
+            childfilename = basename+("-%d" % (i))
+          if absPath==None:
+            pathChild=os.path.abspath(os.path.dirname(savepath))+"/"+path+"/"+self.name()
+          else:
+            pathChild=absPath
+          print pathChild
+          if not os.path.exists(pathChild):
+            os.mkdir(pathChild)
+                
+                
+          childPath = child.savetxt(absPath=pathChild,saveChildren = saveChildren,overwrite = True,forceSave = forceSave,forceFolders=forceFolders)
+          
+          children.append({'attributes':item.attributes(),'path':childPath})
+  
+      if os.path.exists(savepath) and os.path.getmtime(savepath) <= self._meta["modificationTime"] and os.path.exists(parpath) and os.path.getmtime(parpath) <= self._meta["modificationTime"]:
+        if self._unsaved == False and forceSave == False:
+          return basename
 
-    #We save the child cubes
-    if saveChildren:
-      for i in range(0,len(self._children)):
-        item = self._children[i]
-        child = item.datacube()
-        if child.name() != None:
-          childfilename = basename+"-"+child.name()+("-%d" % (i))
-        else:
-          childfilename = basename+("-%d" % (i))
-        childPath = child.savetxt(directory+"/"+childfilename,saveChildren = saveChildren,overwrite = True,forceSave = forceSave)
-        children.append({'attributes':item.attributes(),'path':childPath})
-
-    if os.path.exists(savepath) and os.path.getmtime(savepath) <= self._meta["modificationTime"] and os.path.exists(parpath) and os.path.getmtime(parpath) <= self._meta["modificationTime"]:
-      if self._unsaved == False and forceSave == False:
-        return basename
+    else:
+      #We save the child cubes
+      #print 'saving in old version'
+      if saveChildren:
+        for i in range(0,len(self._children)):
+          item = self._children[i]
+          child = item.datacube()
+          if child.name() != None:
+            childfilename = basename+"-"+child.name()+("-%d" % (i))
+          else:
+            childfilename = basename+("-%d" % (i))
+          childPath = child.savetxt(directory+"/"+childfilename,saveChildren = saveChildren,overwrite = True,forceSave = forceSave)
+          children.append({'attributes':item.attributes(),'path':childPath})
+  
+      if os.path.exists(savepath) and os.path.getmtime(savepath) <= self._meta["modificationTime"] and os.path.exists(parpath) and os.path.getmtime(parpath) <= self._meta["modificationTime"]:
+        if self._unsaved == False and forceSave == False:
+          return basename
 
     #We save the datacube itself
 

@@ -9,39 +9,6 @@ from functools import wraps
 from pyview.lib.classes import *
 import copy
 
-class RemoteInterfaceDecorator(object):
-
-  """
-  A decorator class that will decorate certain functions of a class such that
-  they return True or False instead of the original return value when called.
-  This is useful for modifying a class that is going to get used through a remote interface,
-  such as the InstrumentManager class: Remotely calling initInstrument or getInstrument will in this case not
-  try to return an instance of the instrument that has been created (which usually is unpickable and therefore cannot be send through a remote interface).
-  """
-  
-  def __init__(self,functionsToReplace = []):
-    self._functionsToReplace = functionsToReplace
-    
-  def __call__(self,cls):
-    
-    def replaceMethod(method):
-      
-      @wraps(method)
-      def replacementFunction(args,kwargs,method):
-        result = method(*args,**kwargs)
-        if result:
-          return True
-        return False
-      
-      return lambda *args,**kwargs:replacementFunction(args,kwargs,method)
-    
-    for functionToReplace in self._functionsToReplace:
-      if hasattr(cls,functionToReplace):
-        f = getattr(cls,functionToReplace)
-        setattr(cls,functionToReplace,replaceMethod(f))
-
-    return cls
-
 class InstrumentHandle:
 
   """
@@ -150,7 +117,7 @@ class Manager(Subject,Singleton):
         params[name]=self.getInstrument(name).parameters()
       except:
         print "An error occured when storing the parameters of instrument %s" % name
-        print tracebck.print_exc()
+        print traceback.print_exc()
     return params
 
   def handle(self,name):

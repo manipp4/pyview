@@ -191,7 +191,7 @@ class ThreadedDispatcher(Dispatcher,KillableThread):
     
     def run(self):
       self.processQueue()
-
+      
     def dispatchCB(self,command,callback,*args,**kwargs):
       Dispatcher.dispatchCB(self,command,callback,*args,**kwargs)
       if not self.isAlive():
