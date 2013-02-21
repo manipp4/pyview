@@ -85,7 +85,7 @@ class EditorTabBar(QTabBar):
   def mousePressEvent(self,e):
     self._startDragPosition = e.pos()
     QTabBar.mousePressEvent(self,e)
-    print "ok..."
+    # print "ok..." # dv 6/02/2013
     
   def mouseMoveEvent(self,e):
     if (e.buttons() & Qt.LeftButton):
@@ -627,7 +627,7 @@ class SearchableEditor(QPlainTextEdit):
     self._panel.setLayout(self._layout)
     self._searchText = QLineEdit("")
     self._replaceText = QLineEdit("")
-    self._replaceButton = QCheckBox("replace")
+    self._replaceButton = QCheckBox("and replace by")# dv
     self._forwardButton = QPushButton("Forward")
     self._backwardButton = QPushButton("Backward")
     self._caseSensitive = QCheckBox("Case Sensitive")
@@ -637,13 +637,15 @@ class SearchableEditor(QPlainTextEdit):
     self._replaceText.setFocusPolicy(Qt.TabFocus)
     self._searchText.setFocusPolicy(Qt.TabFocus)
     
+    self._layout.addWidget(QLabel("Search")) # dv
     self._layout.addWidget(self._searchText)
     self._layout.addWidget(self._replaceButton)
     self._layout.addWidget(self._replaceText)
     self._layout.addWidget(self._forwardButton)
     self._layout.addWidget(self._backwardButton)
     self._layout.addWidget(self._caseSensitive)
-    self._layout.addWidget(self._useRegex)
+    self._layout.addWidget(self._useRegex) # dv
+    self._layout.addWidget(QLabel("(Esc to exit search)")) # dv
     self._layout.addStretch()
     self._panel.hide()
 
@@ -972,23 +974,26 @@ class CodeEditor(SearchableEditor,LineTextWidget):
         cursor.setPosition(block.cursor.selectionStart())
       self.setTextCursor(cursor)
       
-    def getCurrentBlock(self):
-
+    def getCurrentBlock(self,delimiter="\n##"):
+    
       text = unicode(self.document().toPlainText())
-      cursor = self.textCursor().position() 
+      blockStart=0
+      blockEnd=len(text)
+      if delimiter != "":
+        cursorStart = self.textCursor().anchor() #dv 
+        cursorStop = self.textCursor().position()
+        blockStart = text.rfind(delimiter,0,max(0,cursorStart-1))+1 #dv 
+        blockEnd = text.find(delimiter,cursorStop)-1
       
-      blockStart = text.rfind("\n##",0,max(0,cursor-1))+1
-      blockEnd = text.find("\n##",cursor)-1
-      
-      if blockStart == -1:
-        blockStart = 0
+        if blockStart == -1:
+          blockStart = 0
                 
-      if blockStart == blockEnd:
-        return None
+        if blockStart == blockEnd:
+          return None
         
-      if blockEnd != -1:
-        blockEnd+=1
-
+        if blockEnd != -1:
+          blockEnd+=1
+        
       selection = QTextEdit.ExtraSelection()
       
       cursor = self.textCursor()
@@ -1001,7 +1006,6 @@ class CodeEditor(SearchableEditor,LineTextWidget):
         cursor.movePosition(QTextCursor.End,QTextCursor.KeepAnchor)
 
       selection.cursor = cursor
-
       return selection
   
     def cursorPositionChanged(self):
@@ -1038,8 +1042,8 @@ class CodeEditor(SearchableEditor,LineTextWidget):
     def errorSelections(self):
       return self._errorSelections
             
-    def getCurrentCodeBlock(self):
-        selection = self.getCurrentBlock()
+    def getCurrentCodeBlock(self,delimiter="\n##"):
+        selection = self.getCurrentBlock(delimiter)
         block = self.document().findBlock(selection.cursor.selectionStart())
         n = block.blockNumber()
         return "\n"*n+unicode(selection.cursor.selection().toPlainText())+u"\n"

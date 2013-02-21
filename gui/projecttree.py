@@ -227,6 +227,10 @@ class ProjectView(QTreeView):
         return 
       self.model().deleteNode(selectedItems[0])
 
+  def openFile(self,node):
+      if type(node) == objectmodel.File:
+        self.emit(SIGNAL("openFile(PyQt_PyObject)"),node.url())
+    
   def mouseDoubleClickEvent(self,event):
     index = self.indexAt(event.pos())
     if index.isValid():

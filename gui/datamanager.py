@@ -21,6 +21,7 @@ from pyview.gui.datacubeview import *
 reload(sys.modules['pyview.gui.datacubeview'])
 from pyview.gui.datacubeview import *
 from pyview.gui.patterns import ObserverWidget
+from pyview.gui.graphicalCommands import *
 
 import numpy
 
@@ -860,6 +861,27 @@ class DataManager(QMainWindow,ObserverWidget):
   def saveCubeAs(self):
     self.saveCube(saveAs = True)
         
+  def markAsBad(self):
+    if userAsk("Are you sure ?",timeOut=5,defaultValue=False):
+      if self._cube == None:
+        return
+      try:
+        self._cube.erase()
+      except:
+        pass
+      workingDir = os.getcwd()
+      subDir = os.path.normpath(workingDir+"/bad_data")
+      if not os.path.exists(subDir):
+        os.mkdir(subDir)
+      if "badData" in self._cube.parameters() and self._cube.parameters()["badData"] == True:
+        messageBox = QMessageBox(QMessageBox.Information,"Already marked, returning...")
+        messageBox.exec_()
+        return
+      self._cube.savetxt(os.path.normpath(subDir+"/"+self._cube.name()))
+      self._cube.parameters()["badData"] = True
+      messageBox = QMessageBox(QMessageBox.Information,"Data marked as bad","The data has been marked and moved into the subfolder \"bad_data\"")
+      messageBox.exec_()
+    
   def markAsGood(self):
     if self._cube == None:
       return
@@ -868,7 +890,8 @@ class DataManager(QMainWindow,ObserverWidget):
     if not os.path.exists(subDir):
       os.mkdir(subDir)
     if "goodData" in self._cube.parameters() and self._cube.parameters()["goodData"] == True:
-      print "Already marked, returning..."
+      messageBox = QMessageBox(QMessageBox.Information,"Already marked, returning...")
+      messageBox.exec_()
       return
     self._cube.savetxt(os.path.normpath(subDir+"/"+self._cube.name()))
     self._cube.parameters()["goodData"] = True
@@ -933,6 +956,7 @@ class DataManager(QMainWindow,ObserverWidget):
     removeDatacube = filemenu.addAction("Remove")
     filemenu.addSeparator()
     markAsGood = filemenu.addAction("Mark as Good")
+    markAsBad = filemenu.addAction("Mark as Bad")
     
     self.connect(loadDatacube,SIGNAL("triggered()"),self.loadDatacube)
     self.connect(newDatacube,SIGNAL("triggered()"),self.addCube)
@@ -940,6 +964,7 @@ class DataManager(QMainWindow,ObserverWidget):
     self.connect(saveDatacubeAs,SIGNAL("triggered()"),self.saveCubeAs)
     self.connect(removeDatacube,SIGNAL("triggered()"),self.removeCube)
     self.connect(markAsGood,SIGNAL("triggered()"),self.markAsGood)
+    self.connect(markAsBad,SIGNAL("triggered()"),self.markAsBad)
     
     menubar.addMenu(filemenu)
     

@@ -6,7 +6,7 @@ import traceback
 import socket
 
 try:
-  import visa
+  import visa                         
   from visa import VI_ERROR_CONN_LOST,VI_ERROR_INV_OBJECT
   from visa import VisaIOError
   from visa import Error

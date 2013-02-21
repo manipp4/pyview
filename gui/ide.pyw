@@ -15,6 +15,7 @@ from PyQt4.QtCore import *
 from pyview.gui.editor.codeeditor import *
 from pyview.gui.threadpanel import *
 from pyview.gui.project import Project
+from pyview.gui.projecttree import ProjectView
 from pyview.helpers.coderunner import MultiProcessCodeRunner
 from pyview.gui.patterns import ObserverWidget
 from pyview.config.parameters import params
@@ -45,13 +46,14 @@ class Log(LineTextWidget):
         self.setDocument(MyDocument)
         self.setMinimumHeight(200)
         self.setReadOnly(True)
-        self.timer = QTimer(self)
+        self.timer = QTimer(self)     # instantiate a timer in this LineTextWidget 
         self._writing = False
-        self.timer.setInterval(300)
-        self.queuedStdoutText = ""
-        self.queuedStderrText = ""
+        self.timer.setInterval(300)   # set its timeout to 0.3s
+        self.queuedStdoutText = ""    #initialize a Stdout queue to an empty string
+        self.queuedStderrText = ""    #initialize a Stderr queue to an empty string
         self.connect(self.timer,SIGNAL("timeout()"),self.addQueuedText)
-        self.timer.start()
+                                      # call addQueuedText() every timeout 
+        self.timer.start()            # start the timer
         self.cnt=0
         
     def contextMenuEvent(self,event):
@@ -64,17 +66,18 @@ class Log(LineTextWidget):
     def clearLog(self):
       self.clear()
         
-    def addQueuedText(self): 
+    def addQueuedText(self):
+    #Insert in the text widget the text present in the queuedStdoutText and queuedStderrText queues
       if self._writing:
         return
       if self.queuedStderrText == "" and self.queuedStdoutText == "":
         return
       self.moveCursor(QTextCursor.End)
       if self.queuedStdoutText != "":
+        # errors appear at queuedStdoutText instead of queuedStderrText => Why ???
         self.textCursor().insertText(self.queuedStdoutText)
       #Insert error messages with an orange background color.
       if self.queuedStderrText != "":
-        cursor = self.textCursor()
         cursor.movePosition(QTextCursor.End)
         oldFormat = cursor.blockFormat()
         format = QTextBlockFormat()
@@ -86,23 +89,26 @@ class Log(LineTextWidget):
 
       self.queuedStdoutText = ""
       self.queuedStderrText = ""
+    
         
     def writeStderr(self,text):
+    # push some text in the queuedStderrText queue
+
       while self._writing:
         time.sleep(0.1)
       try:
         self._writing = True
-#        parsedText = re.sub(r'\0',r'\\0',text)
         self.queuedStderrText += text      
       finally:
         self._writing = False
         
     def writeStdout(self,text):
+    # push some text in the queuedStdoutText queue
+
       while self._writing:
         time.sleep(0.1)
       try:
         self._writing = True
-#        parsedText = re.sub(r'\0',r'\\0',text)
         self.queuedStdoutText += text
       finally:
         self._writing = False
@@ -116,7 +122,7 @@ class IDE(QMainWindow,ObserverWidget):
       -Add standard menu entries (edit, view, etc...)
       -Add explicit support for plugins
     """
-
+    
     def fileBrowser(self):
       return self.FileBrowser
 
@@ -207,20 +213,78 @@ class IDE(QMainWindow,ObserverWidget):
         settings.setValue("ide.lastproject",self._project.filename())      
       else:
         settings.remove("ide.lastproject")
+      settings.setValue("ide.runStartupGroup",self.runStartupGroup.isChecked())
       settings.sync()
       self._codeRunner.terminate()
       
       ##We're saving our project...
-        
+      
     def executeCode(self,code,identifier = "main",filename = "none",editor = None):
       if self._codeRunner.executeCode(code,identifier,filename) != -1:
-        self._runningCodeSessions.append((code,identifier,filename,editor))
-                    
-    def eventFilter(self,object,event):
+        self._runningCodeSessions.append((code,identifier,filename,editor))  
+    
+    def runCode(self,delimiter=""):     # dv 02/2013
+      editor=self.editorWindow.currentEditor()
+      code=editor.getCurrentCodeBlock(delimiter)
+      filename = editor.filename() or "[unnamed buffer]"
+      shortFileName=filename[filename.rfind("\\")+1:]
+      identifier = id(editor)
+      if delimiter=="":
+        poc="entire file"
+      elif delimiter=="\n":
+        poc="current selection"
+      elif delimiter=="\n##":
+        poc="current block"
+      else:
+        poc="???"
+      print "Running "+poc+" in "+shortFileName+" (id="+str(identifier)+")"    
+      self.executeCode(code,filename = filename,editor = editor,identifier = identifier)
+      return True
+    
+    def runBlock(self):
+      return self.runCode(delimiter="\n##")   # dv 02/2013
+      
+    def runSelection(self):                   # dv 02/2013
+      return self.runCode(delimiter="\n")
+      
+    def runFile (self):                       # dv 02/2013
+      return self.runCode(delimiter="")
+    
+    def runFileOrFolder(self,node):  # dv 02/2013
+      if type(node) == objectmodel.File:
+        self.projectTree.openFile(node)
+        return self.runFile()
+      elif type(node) == objectmodel.Folder:
+        for child in node.children():
+          self.runFileOrFolder(child)       
+        return True
+    
+    def runFiles(self):                       # dv 02/2013      
+      widgetWithFocus=self.focusWidget()
+      if type(widgetWithFocus) == CodeEditor:
+        return self.runFile()
+      elif type(widgetWithFocus) == ProjectView:
+        selectedIndexes = widgetWithFocus.selectedIndexes()
+        getNode=widgetWithFocus.model().getNode
+        selectedNodes=map(getNode,selectedIndexes) 
+        for node in selectedNodes:
+          self.runFileOrFolder(node)      
+      elif type(widgetWithFocus) == QTreeWidget:
+        print "Run from QTreeWidget not implemented yet"
+      return False
+                       
+    def eventFilter(self,object,event):  #modification dv 7/02/2013
       if event.type() == QEvent.KeyPress:
         if event.key() == Qt.Key_Enter and type(object) == CodeEditor:
-          self.executeCode(object.getCurrentCodeBlock(),filename = object.filename() or "[unnamed buffer]",editor = object,identifier = id(object))
-          return True
+          if event.modifiers() & Qt.ShiftModifier:     # shift+enter runs only the lines in the selection
+            self.runSelection()
+            return True
+          elif event.modifiers() & Qt.ControlModifier: # ctrl+enter runs the entire file 
+            self.runFile()
+            return True
+          else:                                        # enter runs the current block between ##                                    
+            self.runBlock()
+            return True
       return False
     
     def restartCodeProcess(self):
@@ -230,7 +294,7 @@ class IDE(QMainWindow,ObserverWidget):
 
       if settings.contains('ide.workingpath'):
         self.changeWorkingPath(str(settings.value('ide.workingpath').toString()))
-
+      
     def changeWorkingPath(self,path = None):
 
       settings = QSettings()
@@ -282,6 +346,9 @@ class IDE(QMainWindow,ObserverWidget):
       else:
         self.setWindowTitle(self._windowTitle)
         
+    def toggleRunStartupGroup(self):
+      self.runStartupGroup.setChecked(self.runStartupGroup.isChecked())
+    
     def initializeIcons(self):
       self._icons = dict()
       
@@ -306,10 +373,11 @@ class IDE(QMainWindow,ObserverWidget):
         self._icons[key] = QIcon(basePath+iconFilenames[key])
       
     def initializeMenus(self):
+        settings=QSettings()
+        
         menuBar = self.menuBar()
         
         fileMenu = menuBar.addMenu("File")
-        projectMenu = menuBar.addMenu("Project")
         
         fileNew = fileMenu.addAction(self._icons["newFile"],"&New")
         fileNew.setShortcut(QKeySequence("CTRL+n"))
@@ -321,12 +389,7 @@ class IDE(QMainWindow,ObserverWidget):
         fileSave.setShortcut(QKeySequence("CTRL+s"))
         fileSaveAs = fileMenu.addAction(self._icons["saveFileAs"],"Save &As")
         fileSaveAs.setShortcut(QKeySequence("CTRL+F12"))
-
-        projectNew = projectMenu.addAction(self._icons["newFile"],"&New")
-        projectOpen = projectMenu.addAction(self._icons["openFile"],"&Open")
-        projectSave = projectMenu.addAction(self._icons["saveFile"],"&Save")
-        projectSaveAs = projectMenu.addAction(self._icons["saveFileAs"],"Save &As")
-
+        
         fileMenu.addSeparator()
 
         fileExit = fileMenu.addAction(self._icons["exit"],"Exit")
@@ -338,6 +401,12 @@ class IDE(QMainWindow,ObserverWidget):
         self.connect(fileSave, SIGNAL('triggered()'), self.editorWindow.saveCurrentFile)
         self.connect(fileSaveAs, SIGNAL('triggered()'), self.editorWindow.saveCurrentFileAs)
         self.connect(fileExit, SIGNAL('triggered()'), self.close)
+
+        projectMenu = menuBar.addMenu("Project")
+        projectNew = projectMenu.addAction(self._icons["newFile"],"&New")
+        projectOpen = projectMenu.addAction(self._icons["openFile"],"&Open")
+        projectSave = projectMenu.addAction(self._icons["saveFile"],"&Save")
+        projectSaveAs = projectMenu.addAction(self._icons["saveFileAs"],"Save &As")
 
         self.connect(projectNew, SIGNAL('triggered()'), self.newProject)
         self.connect(projectOpen, SIGNAL('triggered()'), self.openProject)
@@ -351,13 +420,28 @@ class IDE(QMainWindow,ObserverWidget):
 
         self.toolsMenu = menuBar.addMenu("Tools")
         self.codeMenu = menuBar.addMenu("Code")
+        
         self.settingsMenu = menuBar.addMenu("Settings")
+        self.runStartupGroup = self.settingsMenu.addAction("Run startup group at startup")
+        self.runStartupGroup.setCheckable(True)
+        self.connect(self.runStartupGroup, SIGNAL('triggered()'), self.toggleRunStartupGroup)
+        if settings.contains('ide.runStartupGroup'):
+          self.runStartupGroup.setChecked(settings.value('ide.runStartupGroup').toBool()) 
+        
+        
         self.windowMenu = menuBar.addMenu("Window")
         self.helpMenu = menuBar.addMenu("Help")
         
         restartCodeRunner = self.codeMenu.addAction("Restart Code Process")
-        
-        self.connect(restartCodeRunner,SIGNAL("triggered()"),self.restartCodeProcess)      
+        self.connect(restartCodeRunner,SIGNAL("triggered()"),self.restartCodeProcess)
+        self.codeMenu.addSeparator()
+        runFiles=self.codeMenu.addAction(self._icons["executeAllCode"],"&Run File(s)")
+        runFiles.setShortcut(QKeySequence("CTRL+Enter"))
+        runBlock=self.codeMenu.addAction(self._icons["executeCodeBlock"],"&Run Block")
+        runSelection=self.codeMenu.addAction(self._icons["executeCodeSelection"],"&Run Selection")
+        self.connect(runFiles, SIGNAL('triggered()'), self.runFiles)
+        self.connect(runBlock, SIGNAL('triggered()'), self.runBlock)
+        self.connect(runSelection, SIGNAL('triggered()'), self.runSelection)
 
     def initializeToolbars(self):
         self.mainToolbar = self.addToolBar("Tools")
@@ -371,16 +455,20 @@ class IDE(QMainWindow,ObserverWidget):
 
         self.mainToolbar.addSeparator()
                 
-        executeAll = self.mainToolbar.addAction(icons["executeAllCode"],"Run")
-        executeBlock = self.mainToolbar.addAction(icons["executeCodeBlock"],"Run Block")
-        executeSelection = self.mainToolbar.addAction(icons["executeCodeSelection"],"Run Selection")
+        runFiles = self.mainToolbar.addAction(icons["executeAllCode"],"Run File(s)")
+        runBlock = self.mainToolbar.addAction(icons["executeCodeBlock"],"Run Block")
+        runSelection = self.mainToolbar.addAction(icons["executeCodeSelection"],"Run Selection")
+        self.connect(runFiles, SIGNAL('triggered()'), self.runFiles)
+        self.connect(runBlock, SIGNAL('triggered()'), self.runBlock)
+        self.connect(runSelection, SIGNAL('triggered()'), self.runSelection)
 
         self.mainToolbar.addSeparator()
 
         changeWorkingPath = self.mainToolbar.addAction(self._icons["workingPath"],"Change working path")
         killThread = self.mainToolbar.addAction(self._icons["killThread"],"Kill Thread")
         
-        self.connect(executeBlock,SIGNAL('triggered()'),lambda: self.executeCode(self.editorWindow.currentEditor().getCurrentCodeBlock(),filename = self.editorWindow.currentEditor().filename() or "[unnamed buffer]",editor = self.editorWindow.currentEditor(),identifier = id(self.editorWindow.currentEditor())))
+        # obsolete
+        #self.connect(executeBlock,SIGNAL('triggered()'),lambda: self.executeCode(self.editorWindow.currentEditor().getCurrentCodeBlock(),filename = self.editorWindow.currentEditor().filename() or "[unnamed buffer]",editor = self.editorWindow.currentEditor(),identifier = id(self.editorWindow.currentEditor())))
         
         self.connect(newFile, SIGNAL('triggered()'), self.editorWindow.newEditor)
         self.connect(openFile, SIGNAL('triggered()'), self.editorWindow.openFile)
@@ -472,8 +560,7 @@ class IDE(QMainWindow,ObserverWidget):
         self.initializeToolbars()
         
         self.setWindowIcon(self._icons["logo"])
-        
-        #We add a timer
+      
         self.queuedText = ""
         
                 
@@ -484,21 +571,29 @@ class IDE(QMainWindow,ObserverWidget):
 
         if settings.contains('ide.workingpath'):
           self.changeWorkingPath(settings.value('ide.workingpath').toString())
-
-        self.setProject(Project())
-        
-        if settings.contains("ide.lastproject"):
-          try:
-            self.openProject(str(settings.value("ide.lastproject").toString()))
-          except:
-            print "Cannot open last project: %s " % str(settings.value("ide.lastproject").toString())
         
         sys.stdout = self.eventProxy
         sys.stderr = self.errorProxy
 
-        self.logTabs.show()
+        self.logTabs.show() 
         
-
+        self.setProject(Project())
+        lastProjectOpened=False
+        if settings.contains("ide.lastproject"):
+          try:
+            self.openProject(str(settings.value("ide.lastproject").toString()))
+            lastProjectOpened=True      
+          except:
+            print "Cannot open last project: %s " % str(settings.value("ide.lastproject").toString())
+        if lastProjectOpened and self.runStartupGroup.isChecked(): 
+          childrenLevel1= self.projectModel.project().children()
+          found=False
+          for child in childrenLevel1:
+            if child.name().lower() =='startup' :
+              self.runFileOrFolder(child)
+              found=True
+          if not found:
+            print "No \"startup\" file or folder at tree level 1 in current project"       
 
 def startIDE(qApp = None):
   if qApp == None:
@@ -509,10 +604,7 @@ def startIDE(qApp = None):
   QCoreApplication.setApplicationName("Python Code IDE")
 
   qApp.setStyle(QStyleFactory.create("QMacStyle"))
-  qApp.setStyleSheet("""
-QTreeWidget:Item {padding:6;}
-QTreeView:Item {padding:6;}
-  """)
+  qApp.setStyleSheet("""QTreeWidget:Item {padding:6;}QTreeView:Item {padding:6;}""")
   qApp.connect(qApp, SIGNAL('lastWindowClosed()'), qApp,
                     SLOT('quit()'))
   MyIDE = IDE()

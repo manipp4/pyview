@@ -121,6 +121,13 @@ class Datacube(Subject,Observer,Reloadable):
     self._meta["filename"] = os.path.realpath(filename)
     self.setModified()
     self.notify("filename",filename)
+
+  def relfilename(self):
+    """
+    Returns the relative filename of the datacube.
+    """
+    return self._meta["filename"]
+
     
   def filename(self):
     """
@@ -786,6 +793,20 @@ class Datacube(Subject,Observer,Reloadable):
     self._meta["modificationTime"] = os.path.getmtime(savepath)
 
     return basename
+  
+  def erase(self):
+    """
+    Erase a datacube from HardDrive
+    """
+    filename=self.filename()
+    
+    for i in range(len(self._children)-1,-1,-1):
+      self._children[i].datacube().erase()
+    try:
+      os.remove(filename)
+      os.remove(filename[:-3]+'txt')
+    except:
+      raise
         
   def name(self):
     """
@@ -857,7 +878,7 @@ class Datacube(Subject,Observer,Reloadable):
     
     guessStructure = False
     
-    if version in ["0.1","0.2"]:
+    if version in ["0.1","0.2","0.3"]:
       self._meta = data["meta"]
       self._parameters = data["parameters"]
     elif version == "undefined":
@@ -871,7 +892,7 @@ class Datacube(Subject,Observer,Reloadable):
       self._parameters = data["parameters"]
     
     self._children = []
-    
+
     if loadChildren:
       if version == "undefined" or version == "0.1":
         for key in data["children"]:
@@ -887,7 +908,7 @@ class Datacube(Subject,Observer,Reloadable):
           except:
             self.removeChild(datacube)
             print "cannot load 1 datacube"
-      elif version == "0.2":
+      elif version == "0.2" or version == "0.3":
         for child in data['children']:
           try:
             datacube = Datacube()
