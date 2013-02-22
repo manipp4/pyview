@@ -4,7 +4,7 @@ import time
 import traceback
 from pyview.lib.patterns import KillableThread,Reloadable,StopThread,Subject
 from threading import RLock
-import traceback
+#import traceback         dv 02/2013
 import __builtin__,os.path
 
 _importFunction = __builtin__.__import__
@@ -394,7 +394,7 @@ class CodeProcess(Process):
     
   def run(self):
     print "New code process up and running..."
-    sys.stderr = self.StreamProxy(self._stdoutQueue)
+    sys.stderr = self.StreamProxy(self._stdoutQueue)   #why not stderr?
     sys.stdout = self.StreamProxy(self._stdoutQueue)
     sys.stdin = self.StreamProxy(self._stdinQueue)
     while True:

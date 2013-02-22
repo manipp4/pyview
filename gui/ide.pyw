@@ -560,22 +560,23 @@ class IDE(QMainWindow,ObserverWidget):
         self.initializeToolbars()
         
         self.setWindowIcon(self._icons["logo"])
-      
-        self.queuedText = ""
         
-                
+        self.logTabs.show()
+        
+        self.queuedText = ""        
         self.errorProxy = LogProxy(self.MyLog.writeStderr)
         self.eventProxy = LogProxy(self.MyLog.writeStdout)
+        
+        
+        sys.stdout = self.eventProxy
+        sys.stderr = self.errorProxy
+
+        #self.logTabs.show() 
 
         settings = QSettings()
 
         if settings.contains('ide.workingpath'):
           self.changeWorkingPath(settings.value('ide.workingpath').toString())
-        
-        sys.stdout = self.eventProxy
-        sys.stderr = self.errorProxy
-
-        self.logTabs.show() 
         
         self.setProject(Project())
         lastProjectOpened=False

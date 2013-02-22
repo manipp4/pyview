@@ -220,21 +220,20 @@ class MyMplCanvas(FigureCanvas):
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
     def __init__(self, parent=None, width=5, height=5, dpi=60):
 
-        fig = Figure(figsize=(width, height), dpi=dpi)
+        fig = Figure(figsize=[width, height], dpi=dpi)
         self._fig = fig
         self._dialog = None
         self._width = width
         self._height = height
         self._dpi = dpi
         self._pressed = False
-
         FigureCanvas.__init__(self, fig)
         
 #        self.setFixedWidth(self._dpi*self._width)
 #        self.setFixedHeight(self._dpi*self._height)
         
         self._isDrawing = False
-        self._extraCode = """#axes.set_title("test")
+        #self._extraCode = """#axes.set_title("test")
 #axes.set_xlabel("frequency [GHz]")"""
         self.axes = fig.add_subplot(111)
         self.axes.set_autoscale_on(True) 
