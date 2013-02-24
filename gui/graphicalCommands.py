@@ -56,8 +56,16 @@ def userAsk(message,title="None",timeOut=10,defaultValue=False):
   else :
     return defaultValue
   
+
   
   
+  
+def userAskValue(message,title="Warning!"):
+  answer,bool = QInputDialog().getText(QInputDialog(),title, message)
+  if bool:
+    return float(answer),bool
+  else :
+    return 0,bool
 
 
 
