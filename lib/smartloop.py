@@ -46,9 +46,10 @@ class SmartLoop(Subject,Observer,Reloadable):
       else:
         self._value=self._value+self._step
     self._index+=1
-    if self._value>self._stop:
-      self.delete()
-      raise StopIteration
+    if self._stop!=None:
+      if self._value>self._stop:
+        self.delete()
+        raise StopIteration
     
     self.lm.updateLoop(self)
     
@@ -84,8 +85,7 @@ class SmartLoop(Subject,Observer,Reloadable):
   
     self.lm=LoopManager()
     self.lm.addLoop(self)
-  
-  
+    
   
   
   def __del__(self):

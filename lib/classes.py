@@ -247,4 +247,10 @@ class RemoteInstrument(ThreadedDispatcher,Reloadable,object):
       
   def __getattr__(self,attr):
     return lambda *args,**kwargs:self.remoteDispatch(attr,args,kwargs)
+  
+  def __call__(self,request):
+    """
+    redefinig instr(request) to instr.ask(request) for remote instruments
+    """
+    return self.ask(request)
         

@@ -394,6 +394,7 @@ class CodeProcess(Process):
     
   def run(self):
     print "New code process up and running..."
+    #sys.stderr = self.StreamProxy(self._stderrQueue)   DV
     sys.stderr = self.StreamProxy(self._stdoutQueue)   #why not stderr?
     sys.stdout = self.StreamProxy(self._stdoutQueue)
     sys.stdin = self.StreamProxy(self._stdinQueue)

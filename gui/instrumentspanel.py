@@ -133,6 +133,9 @@ class InstrumentsPanel(QWidget,ObserverWidget):
     if path == None:
       path = self._picklePath
     string = yaml.dump(self._states)
+    stateDir = os.path.dirname(path)
+    if not os.path.exists(stateDir):
+        os.mkdir(stateDir)
     file = open(path,"w")
     file.write(string)
     file.close()
@@ -168,7 +171,7 @@ class InstrumentsPanel(QWidget,ObserverWidget):
       setupPath = str(settings.value("directories.setup").toString())
     else:
       setupPath = os.getcwd()
-    self._picklePath = setupPath+r"/config/setups.pickle"
+    self._picklePath = setupPath+r"\config\setups.pickle"
     self.loadStates()
     self.dashboards = dict()
     self.setWindowTitle("Instruments")

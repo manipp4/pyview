@@ -90,10 +90,8 @@ class Log(LineTextWidget):
       self.queuedStdoutText = ""
       self.queuedStderrText = ""
     
-        
     def writeStderr(self,text):
     # push some text in the queuedStderrText queue
-
       while self._writing:
         time.sleep(0.1)
       try:
@@ -104,7 +102,6 @@ class Log(LineTextWidget):
         
     def writeStdout(self,text):
     # push some text in the queuedStdoutText queue
-
       while self._writing:
         time.sleep(0.1)
       try:
@@ -480,6 +477,14 @@ class IDE(QMainWindow,ObserverWidget):
     def __init__(self,parent=None):
         QMainWindow.__init__(self,parent)
         ObserverWidget.__init__(self)
+       # beginning of GUI definition  +  MultiProcessCodeRunner,CodeEditorWindow, Log, and errorConsole instantiation  
+        self._windowTitle = "Python Lab IDE"
+        self.setWindowTitle(self._windowTitle)
+        self.setDockOptions(QMainWindow.AllowTabbedDocks)
+        self.LeftBottomDock = QDockWidget()
+        self.LeftBottomDock.setWindowTitle("Log")
+        self.RightBottomDock = QDockWidget()
+        self.RightBottomDock.setWindowTitle("File Browser")
         
         self._timer = QTimer(self)
         self._runningCodeSessions = []
@@ -487,43 +492,27 @@ class IDE(QMainWindow,ObserverWidget):
         self.connect(self._timer,SIGNAL("timeout()"),self.onTimer)
         self._timer.start()
         
-        self._windowTitle = "Python Lab IDE"
-        self._workingDirectory = None
-        self.setWindowTitle(self._windowTitle)
-        
-        self.setDockOptions(QMainWindow.AllowTabbedDocks)
-        self.LeftBottomDock = QDockWidget()
-        self.RightBottomDock = QDockWidget()
-        self.LeftBottomDock.setWindowTitle("Log")
-        self.RightBottomDock.setWindowTitle("File Browser")
-
         self.MyLog = Log()
-        
-        horizontalSplitter = QSplitter(Qt.Horizontal)
-        verticalSplitter = QSplitter(Qt.Vertical)      
-
         gv = dict()
-
         self._codeRunner = MultiProcessCodeRunner(gv = gv,lv = gv)
-
-        self.editorWindow = CodeEditorWindow(self,newEditorCallback = self.newEditorCallback)
+        self.editorWindow = CodeEditorWindow(self,newEditorCallback = self.newEditorCallback)   # tab editor window
         self.errorConsole = ErrorConsole(codeEditorWindow = self.editorWindow,codeRunner = self._codeRunner)
         
-        self.tabs = QTabWidget()
         self.logTabs = QTabWidget()
-        
         self.logTabs.addTab(self.MyLog,"Log")
         self.logTabs.addTab(self.errorConsole,"Traceback")
-        
+               
+        verticalSplitter = QSplitter(Qt.Vertical)       # outer verticalsplitter
+        horizontalSplitter = QSplitter(Qt.Horizontal)   # upper horizontal plitter in outer splitter   
+        self.tabs = QTabWidget()                        # empty tabs for future project /thread
         self.tabs.setMaximumWidth(350)
-        horizontalSplitter.addWidget(self.tabs)
-        horizontalSplitter.addWidget(self.editorWindow)
+        horizontalSplitter.addWidget(self.tabs)         # add the project/thread tabs
+        horizontalSplitter.addWidget(self.editorWindow) # add the tabs editor window
         verticalSplitter.addWidget(horizontalSplitter)
-        verticalSplitter.addWidget(self.logTabs)
+        verticalSplitter.addWidget(self.logTabs)        # add the log/error window
         verticalSplitter.setStretchFactor(0,2)        
         
-        self.projectWindow = QWidget()        
-                
+        self.projectWindow = QWidget()                  # create the project tab with its toolbar menu
         self.projectTree = projecttree.ProjectView() 
         self.projectModel = projecttree.ProjectModel(objectmodel.Folder("[project]"))
         self.projectTree.setModel(self.projectModel)
@@ -542,10 +531,10 @@ class IDE(QMainWindow,ObserverWidget):
         layout.addWidget(self.projectTree)
         
         self.projectWindow.setLayout(layout)
-        
+                                                        # create the thread panel tab
         self.threadPanel = ThreadPanel(codeRunner = self._codeRunner,editorWindow = self.editorWindow)
         
-        self.tabs.addTab(self.projectWindow,"Project")        
+        self.tabs.addTab(self.projectWindow,"Project")  # create the project and thread tabs to the empty tabs      
         self.tabs.addTab(self.threadPanel,"Processes")
         self.connect(self.projectTree,SIGNAL("openFile(PyQt_PyObject)"),lambda filename: self.editorWindow.openFile(filename))
 
@@ -561,23 +550,24 @@ class IDE(QMainWindow,ObserverWidget):
         
         self.setWindowIcon(self._icons["logo"])
         
+        self._workingDirectory = None
+      # end of GUI definition
+         
+        self.queuedText = ""        
         self.logTabs.show()
         
-        self.queuedText = ""        
         self.errorProxy = LogProxy(self.MyLog.writeStderr)
         self.eventProxy = LogProxy(self.MyLog.writeStdout)
-        
-        
-        sys.stdout = self.eventProxy
-        sys.stderr = self.errorProxy
-
-        #self.logTabs.show() 
-
+         
         settings = QSettings()
 
         if settings.contains('ide.workingpath'):
           self.changeWorkingPath(settings.value('ide.workingpath').toString())
-        
+
+        sys.stdout = self.eventProxy
+        sys.stderr = self.errorProxy
+        self.logTabs.show() 
+
         self.setProject(Project())
         lastProjectOpened=False
         if settings.contains("ide.lastproject"):

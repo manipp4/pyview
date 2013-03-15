@@ -320,11 +320,21 @@ class RemoteManager():
       
   def dispatch(self,instrument,command,args = [],kwargs = {}):
     instr = self._manager.getInstrument(instrument)
-    if hasattr(instr,command):
-      method = getattr(instr,command)
-      if callable(method):
-        return  method(*args,**kwargs)
-      else:
-        return method
-    raise Exception("Unknown function name: %s" % command)
+    if command == 'ask':
+      request = "instr."+str(*args)
+      try:
+        return eval(request)    
+      except :
+        raise
+    elif command == 'evalByServer':
+      return eval(*args)
+    elif hasattr(instr,command):
+      # default behaviour initially programmed by Andreas Dewes  :
+      method = getattr(instr,command)       # built instr.command
+      if callable(method):                  # if it is a function :
+        return  method(*args,**kwargs)      #   return its evaluation with arguments  *args and **kwargs
+      else:                                 # else
+        return method                       #   return the object itself
+    else:  # note that this behaviour forbid the syntax instr.object.function() -> see ask case above
+      raise Exception("Unknown function name: %s" % command)
   

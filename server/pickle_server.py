@@ -23,6 +23,7 @@ from pyview.lib.classes import *
 class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
 
     manager = None
+    DEBUG=True
 
     def handle(self):
       while True:
@@ -62,7 +63,8 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
               returnMessage = Command(name = "exception",args = [exception,traceback.format_exc()])
             except:
               returnMessage = Command(name = "exception",args = [Exception("Unpickable exception!"),traceback.format_exc()])
-            self.request.send(returnMessage.toString())
+            finally:
+              self.request.send(returnMessage.toString())       
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     pass

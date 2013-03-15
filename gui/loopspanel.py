@@ -16,7 +16,7 @@ from pyview.lib.classes import *
 from pyview.lib.patterns import *
 from pyview.gui.patterns import ObserverWidget
 from pyview.gui.graphicalCommands import *
-from pyview.helpers.loopsmanager import LoopManager as lm
+from pyview.helpers.loopsmanager import LoopManager as Lm
 from pyview.gui.graphicalCommands import *
 from pyview.config.parameters import params
 
@@ -89,7 +89,7 @@ class LoopsPanel(QWidget,ObserverWidget):
     
     self.initializeIcons()
     self._items=dict()
-    self._loopsmanager = lm()
+    self._loopsmanager = Lm()
     self._loopsmanager.attach(self)
     self._globals = globals
     self._selectedLoop = None
