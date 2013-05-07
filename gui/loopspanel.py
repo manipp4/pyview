@@ -100,7 +100,7 @@ class LoopsPanel(QWidget,ObserverWidget):
     settings = QSettings()
         
     layout = QGridLayout()    
-    self.setWindowTitle("Loops")
+    self.setWindowTitle("Loops Manager")
     
     #iconsBarW = QWidget()
     #self._iconsBar = QGridLayout(iconsBarW)

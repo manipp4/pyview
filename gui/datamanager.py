@@ -877,11 +877,12 @@ class DataManager(QMainWindow,ObserverWidget):
         messageBox = QMessageBox(QMessageBox.Information,"Already marked, returning...")
         messageBox.exec_()
         return
+      self.removeCube()
       self._cube.savetxt(os.path.normpath(subDir+"/"+self._cube.name()))
       self._cube.parameters()["badData"] = True
       messageBox = QMessageBox(QMessageBox.Information,"Data marked as bad","The data has been marked and moved into the subfolder \"bad_data\"")
       messageBox.exec_()
-    
+      
   def markAsGood(self):
     if self._cube == None:
       return

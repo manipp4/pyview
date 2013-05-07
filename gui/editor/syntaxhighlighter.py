@@ -28,7 +28,7 @@ STYLES = {
     'keyword': format('red','bold'),
     'operator': format('darkred','bold'),
     'brace': format('darkGray','bold'),
-    'defclass': format('darkBlue', 'bold'),
+    'defclass': format('blue', 'bold'),
     'string': format('#3344AA','bold'),
     'string2': format('#3344AA','bold'),
     'comment': format('grey', 'italic'),

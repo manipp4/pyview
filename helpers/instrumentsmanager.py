@@ -215,6 +215,8 @@ class Manager(Subject,Singleton):
         kwargs = params["kwargs"]
       else:
         kwargs = {}
+      if not('name' in kwargs):
+        kwargs['name']=params['name']
       if 'args' in params:
         args = params["args"]
       else:

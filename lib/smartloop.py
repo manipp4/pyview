@@ -60,7 +60,7 @@ class SmartLoop(Subject,Observer,Reloadable):
     self.lm.removeLoop(self)
 
   
-  def __init__(self,start,stop=None,step=None,linnsteps=None,name='unamed loop'):
+  def __init__(self,start,step=None,stop=None,linnsteps=None,name='unamed loop'):
     
     Subject.__init__(self)
     Observer.__init__(self)
