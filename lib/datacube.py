@@ -16,8 +16,6 @@ import string
 from pyview.helpers.datamanager import DataManager
 from pyview.lib.patterns import Subject,Observer,Reloadable
 
-##test
-
 class ChildItem:
   
   def __init__(self,datacube,attributes):
