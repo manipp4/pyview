@@ -215,14 +215,14 @@ class Manager(Subject,Singleton):
         kwargs = params["kwargs"]
       else:
         kwargs = {}
-      if not('name' in kwargs):
-        kwargs['name']=params['name']
+#      if not('name' in kwargs):
+#        kwargs['name']=params['name']
       if 'args' in params:
         args = params["args"]
       else:
         args = []
       try:
-        self.initInstrument(name = url,baseclass = baseclass,args = args,kwargs = kwargs,**globalParameters)
+        self.initInstrument(name=url,baseclass = baseclass,args = args,kwargs = kwargs,**globalParameters)
       except:
         print "Could not initialize instrument: %s" % url
         traceback.print_exc()

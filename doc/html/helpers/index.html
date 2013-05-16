@@ -1,0 +1,433 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Helpers &mdash; Qubit Project 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Qubit Project 1.0 documentation" href="../index.html" />
+    <link rel="next" title="Server" href="../server/index.html" />
+    <link rel="prev" title="Graphical User Interface" href="../gui/index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../server/index.html" title="Server"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../gui/index.html" title="Graphical User Interface"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">Qubit Project 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="helpers">
+<h1>Helpers<a class="headerlink" href="#helpers" title="Permalink to this headline">¶</a></h1>
+<p>This section contains the documentation of the helper classes.</p>
+<div class="section" id="data-manager">
+<h2>Data Manager<a class="headerlink" href="#data-manager" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pyview.helpers.datamanager.DataManager">
+<em class="property">class </em><tt class="descclassname">pyview.helpers.datamanager.</tt><tt class="descname">DataManager</tt><a class="headerlink" href="#pyview.helpers.datamanager.DataManager" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">pyview.lib.patterns.Singleton</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">pyview.lib.patterns.Reloadable</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">pyview.lib.patterns.ThreadedDispatcher</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">pyview.lib.patterns.Subject</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">pyview.lib.patterns.Observer</span></tt></p>
+<p>The DataManager is a Singleton class which can be used to keep track of datacubes. Just call addDatacube() to add a datacube to the DataManager. pyview.gui.datamanager.DataManager provides a graphical frontend of the DataManager class.</p>
+<dl class="method">
+<dt id="pyview.helpers.datamanager.DataManager.addDatacube">
+<tt class="descname">addDatacube</tt><big>(</big><em>datacube</em><big>)</big><a class="headerlink" href="#pyview.helpers.datamanager.DataManager.addDatacube" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a datacube to the data manager.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.datamanager.DataManager.autoPlot">
+<tt class="descname">autoPlot</tt><big>(</big><em>datacube</em>, <em>clear=False</em><big>)</big><a class="headerlink" href="#pyview.helpers.datamanager.DataManager.autoPlot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Triggers an autoPlot of the selected datacube, i.e. a graphical frontend that observeres the state of the data manager will be notified that &#8216;datacube&#8217; should be replotted.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.datamanager.DataManager.clear">
+<tt class="descname">clear</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.helpers.datamanager.DataManager.clear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes all datacubes from the data manager.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.datamanager.DataManager.datacubes">
+<tt class="descname">datacubes</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.helpers.datamanager.DataManager.datacubes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the datacubes.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.datamanager.DataManager.removeDatacube">
+<tt class="descname">removeDatacube</tt><big>(</big><em>datacube</em><big>)</big><a class="headerlink" href="#pyview.helpers.datamanager.DataManager.removeDatacube" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes a datacube from the data manager.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.datamanager.DataManager.updated">
+<tt class="descname">updated</tt><big>(</big><em>subject=None</em>, <em>property=None</em>, <em>value=None</em><big>)</big><a class="headerlink" href="#pyview.helpers.datamanager.DataManager.updated" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="code-runner">
+<h2>Code Runner<a class="headerlink" href="#code-runner" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pyview.helpers.coderunner.CodeRunner">
+<em class="property">class </em><tt class="descclassname">pyview.helpers.coderunner.</tt><tt class="descname">CodeRunner</tt><big>(</big><em>gv={}</em>, <em>lv={}</em><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.CodeRunner" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">pyview.lib.patterns.Reloadable</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">pyview.lib.patterns.Subject</span></tt></p>
+<p>A class that manages the execution of code in different threads.</p>
+<dl class="method">
+<dt id="pyview.helpers.coderunner.CodeRunner.clear">
+<tt class="descname">clear</tt><big>(</big><em>gv={}</em>, <em>lv={}</em><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.CodeRunner.clear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinitializes the class and deletes all running threads.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.CodeRunner.clearExceptions">
+<tt class="descname">clearExceptions</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.CodeRunner.clearExceptions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clears all exceptions that are stored in the exception dictionary.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.CodeRunner.currentWorkingDirectory">
+<tt class="descname">currentWorkingDirectory</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.CodeRunner.currentWorkingDirectory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the current working directory.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.CodeRunner.executeCode">
+<tt class="descname">executeCode</tt><big>(</big><em>code</em>, <em>identifier</em>, <em>filename=None</em>, <em>lv=None</em>, <em>gv=None</em><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.CodeRunner.executeCode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Executes a code string with a given identifier, filename and local and global variable dictionary.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.CodeRunner.formatException">
+<tt class="descname">formatException</tt><big>(</big><em>identifier</em><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.CodeRunner.formatException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a formatted exception string for the given identifier, or an empty string if no exception is available.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.CodeRunner.getException">
+<tt class="descname">getException</tt><big>(</big><em>identifier</em><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.CodeRunner.getException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the exception thrown by the code thread with the given identifier, or None if no exception is present.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.CodeRunner.getId">
+<tt class="descname">getId</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.CodeRunner.getId" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a unique ID which can be used to identify a code thread.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.CodeRunner.getTraceback">
+<tt class="descname">getTraceback</tt><big>(</big><em>identifier</em><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.CodeRunner.getTraceback" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the traceback thrown by the code thread with the given identifier, or None if no traceback is present.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.CodeRunner.gv">
+<tt class="descname">gv</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.CodeRunner.gv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the global variables dictionary.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.CodeRunner.hasFailed">
+<tt class="descname">hasFailed</tt><big>(</big><em>identifier</em><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.CodeRunner.hasFailed" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if the thread with the given identifier has terminated abnormally.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.CodeRunner.isExecutingCode">
+<tt class="descname">isExecutingCode</tt><big>(</big><em>identifier=None</em><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.CodeRunner.isExecutingCode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if the thread with the given identifier is currently executing code.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.CodeRunner.lv">
+<tt class="descname">lv</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.CodeRunner.lv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the local variables dictionary.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.CodeRunner.setCurrentWorkingDirectory">
+<tt class="descname">setCurrentWorkingDirectory</tt><big>(</big><em>directory</em><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.CodeRunner.setCurrentWorkingDirectory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Changes the current working directoy.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.CodeRunner.status">
+<tt class="descname">status</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.CodeRunner.status" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a dictionary containing information on all threads that are managed by the code runner.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.CodeRunner.stopExecution">
+<tt class="descname">stopExecution</tt><big>(</big><em>identifier</em><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.CodeRunner.stopExecution" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stops the execution of code in the thread with the given identifier by asynchronously raising a special exception in the thread.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pyview.helpers.coderunner.MultiProcessCodeRunner">
+<em class="property">class </em><tt class="descclassname">pyview.helpers.coderunner.</tt><tt class="descname">MultiProcessCodeRunner</tt><big>(</big><em>gv={}</em>, <em>lv={}</em><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.MultiProcessCodeRunner" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="pyview.helpers.coderunner.MultiProcessCodeRunner.codeProcess">
+<tt class="descname">codeProcess</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.MultiProcessCodeRunner.codeProcess" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.MultiProcessCodeRunner.dispatch">
+<tt class="descname">dispatch</tt><big>(</big><em>command</em>, <em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.MultiProcessCodeRunner.dispatch" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.MultiProcessCodeRunner.hasStderr">
+<tt class="descname">hasStderr</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.MultiProcessCodeRunner.hasStderr" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.MultiProcessCodeRunner.hasStdout">
+<tt class="descname">hasStdout</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.MultiProcessCodeRunner.hasStdout" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.MultiProcessCodeRunner.restart">
+<tt class="descname">restart</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.MultiProcessCodeRunner.restart" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.MultiProcessCodeRunner.setTimeout">
+<tt class="descname">setTimeout</tt><big>(</big><em>timeout</em><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.MultiProcessCodeRunner.setTimeout" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.MultiProcessCodeRunner.start">
+<tt class="descname">start</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.MultiProcessCodeRunner.start" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.MultiProcessCodeRunner.stderr">
+<tt class="descname">stderr</tt><big>(</big><em>timeout=0.5</em><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.MultiProcessCodeRunner.stderr" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.MultiProcessCodeRunner.stdin">
+<tt class="descname">stdin</tt><big>(</big><em>input</em><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.MultiProcessCodeRunner.stdin" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.MultiProcessCodeRunner.stdout">
+<tt class="descname">stdout</tt><big>(</big><em>timeout=0.5</em><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.MultiProcessCodeRunner.stdout" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.MultiProcessCodeRunner.stop">
+<tt class="descname">stop</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.MultiProcessCodeRunner.stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.MultiProcessCodeRunner.terminate">
+<tt class="descname">terminate</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.MultiProcessCodeRunner.terminate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.coderunner.MultiProcessCodeRunner.timeout">
+<tt class="descname">timeout</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.helpers.coderunner.MultiProcessCodeRunner.timeout" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="instruments-manager">
+<h2>Instruments Manager<a class="headerlink" href="#instruments-manager" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pyview.helpers.instrumentsmanager.Manager">
+<em class="property">class </em><tt class="descclassname">pyview.helpers.instrumentsmanager.</tt><tt class="descname">Manager</tt><big>(</big><em>defaultInstrumentsModule='instruments.'</em>, <em>defaultFrontpanelsModule='frontpanels.'</em><big>)</big><a class="headerlink" href="#pyview.helpers.instrumentsmanager.Manager" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">pyview.lib.patterns.Subject</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">pyview.lib.patterns.Singleton</span></tt></p>
+<p>Manages the creation and reloading of instruments.</p>
+<dl class="method">
+<dt id="pyview.helpers.instrumentsmanager.Manager.dispatch">
+<tt class="descname">dispatch</tt><big>(</big><em>instrument</em>, <em>command</em>, <em>args=</em><span class="optional">[</span><span class="optional">]</span>, <em>kwargs={}</em><big>)</big><a class="headerlink" href="#pyview.helpers.instrumentsmanager.Manager.dispatch" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.instrumentsmanager.Manager.frontPanel">
+<tt class="descname">frontPanel</tt><big>(</big><em>name</em><big>)</big><a class="headerlink" href="#pyview.helpers.instrumentsmanager.Manager.frontPanel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the frontpanel for the given instrument.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.instrumentsmanager.Manager.getInstrument">
+<tt class="descname">getInstrument</tt><big>(</big><em>name</em><big>)</big><a class="headerlink" href="#pyview.helpers.instrumentsmanager.Manager.getInstrument" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.instrumentsmanager.Manager.handle">
+<tt class="descname">handle</tt><big>(</big><em>name</em><big>)</big><a class="headerlink" href="#pyview.helpers.instrumentsmanager.Manager.handle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the handle for a given instrument.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.instrumentsmanager.Manager.hasInstrument">
+<tt class="descname">hasInstrument</tt><big>(</big><em>name</em><big>)</big><a class="headerlink" href="#pyview.helpers.instrumentsmanager.Manager.hasInstrument" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.instrumentsmanager.Manager.initInstrument">
+<tt class="descname">initInstrument</tt><big>(</big><em>name</em>, <em>baseclass=None</em>, <em>args=</em><span class="optional">[</span><span class="optional">]</span>, <em>kwargs={}</em>, <em>forceReload=False</em><big>)</big><a class="headerlink" href="#pyview.helpers.instrumentsmanager.Manager.initInstrument" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads an instrument. &#8220;name&#8221; is either the plain name of the instrument to be initialized (e.g. &#8220;vna1&#8221;) or an URL (e.g. &#8220;rip://localhost:8000/vna1&#8221;)
+Returns the reference to the instrument object, or None if the initialization fails.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.instrumentsmanager.Manager.initInstruments">
+<tt class="descname">initInstruments</tt><big>(</big><em>instruments</em>, <em>globalParameters={}</em><big>)</big><a class="headerlink" href="#pyview.helpers.instrumentsmanager.Manager.initInstruments" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.instrumentsmanager.Manager.initRemoteInstrument">
+<tt class="descname">initRemoteInstrument</tt><big>(</big><em>address</em>, <em>baseclass=None</em>, <em>args=</em><span class="optional">[</span><span class="optional">]</span>, <em>kwargs={}</em>, <em>forceReload=False</em><big>)</big><a class="headerlink" href="#pyview.helpers.instrumentsmanager.Manager.initRemoteInstrument" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads a remote instrument, either through the HTTP XML-RPC protocol or through the custom Remote Instrument Protocol (RIP)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.instrumentsmanager.Manager.instrumentNames">
+<tt class="descname">instrumentNames</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.helpers.instrumentsmanager.Manager.instrumentNames" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.instrumentsmanager.Manager.instruments">
+<tt class="descname">instruments</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.helpers.instrumentsmanager.Manager.instruments" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.instrumentsmanager.Manager.parameters">
+<tt class="descname">parameters</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.helpers.instrumentsmanager.Manager.parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a dictionary containing the parameters of all the instruments.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.instrumentsmanager.Manager.reloadInstrument">
+<tt class="descname">reloadInstrument</tt><big>(</big><em>name</em>, <em>baseclass=None</em>, <em>args=</em><span class="optional">[</span><span class="optional">]</span>, <em>kwargs={}</em><big>)</big><a class="headerlink" href="#pyview.helpers.instrumentsmanager.Manager.reloadInstrument" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reloads a given instrument.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.instrumentsmanager.Manager.restoreState">
+<tt class="descname">restoreState</tt><big>(</big><em>state</em>, <em>withInitialization=True</em><big>)</big><a class="headerlink" href="#pyview.helpers.instrumentsmanager.Manager.restoreState" title="Permalink to this definition">¶</a></dt>
+<dd><p>Restores the state of all instruments that are references in the &#8220;state&#8221; parameter AND that are already loaded.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.helpers.instrumentsmanager.Manager.saveState">
+<tt class="descname">saveState</tt><big>(</big><em>stateName</em>, <em>instruments=</em><span class="optional">[</span><span class="optional">]</span>, <em>withInitialization=True</em><big>)</big><a class="headerlink" href="#pyview.helpers.instrumentsmanager.Manager.saveState" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a dictionary containing the parameters of all the instruments.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Helpers</a><ul>
+<li><a class="reference internal" href="#data-manager">Data Manager</a></li>
+<li><a class="reference internal" href="#code-runner">Code Runner</a></li>
+<li><a class="reference internal" href="#instruments-manager">Instruments Manager</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../gui/index.html"
+                        title="previous chapter">Graphical User Interface</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../server/index.html"
+                        title="next chapter">Server</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/helpers/index.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../server/index.html" title="Server"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../gui/index.html" title="Graphical User Interface"
+             >previous</a> |</li>
+        <li><a href="../index.html">Qubit Project 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, Andreas Dewes.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+  </body>
+</html>

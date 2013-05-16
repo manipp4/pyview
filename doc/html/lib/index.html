@@ -1,0 +1,827 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Library &mdash; Qubit Project 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Qubit Project 1.0 documentation" href="../index.html" />
+    <link rel="next" title="Graphical User Interface" href="../gui/index.html" />
+    <link rel="prev" title="Welcome to PyView documentation" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../gui/index.html" title="Graphical User Interface"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../index.html" title="Welcome to PyView documentation"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">Qubit Project 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="library">
+<h1>Library<a class="headerlink" href="#library" title="Permalink to this headline">¶</a></h1>
+<p>This section contains the documentation of the library classes.</p>
+<div class="section" id="datacube">
+<h2>Datacube<a class="headerlink" href="#datacube" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pyview.lib.datacube.Datacube">
+<em class="property">class </em><tt class="descclassname">pyview.lib.datacube.</tt><tt class="descname">Datacube</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">pyview.lib.patterns.Subject</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">pyview.lib.patterns.Observer</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">pyview.lib.patterns.Reloadable</span></tt></p>
+<p>This is a hirarchical data storage class.</p>
+<p>A datacube stores a 2-dimensional array of values. Each array len(self._table[self._index,:])) is identified by a name. In addition, you can add one or more &#8220;child datacubes&#8221; to each row of the array, thus creating a multidimensional data model.</p>
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.addChild">
+<tt class="descname">addChild</tt><big>(</big><em>cube</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.addChild" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a child to the datacube</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.attributesOfChild">
+<tt class="descname">attributesOfChild</tt><big>(</big><em>child</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.attributesOfChild" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.autoPlot">
+<tt class="descname">autoPlot</tt><big>(</big><em>clear=False</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.autoPlot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.changed">
+<tt class="descname">changed</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.changed" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if the datacube has been changed but not saved</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.children">
+<tt class="descname">children</tt><big>(</big><em>**kwargs</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.children" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the children dictionary of the daacube</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.childrenAt">
+<tt class="descname">childrenAt</tt><big>(</big><em>row</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.childrenAt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns all child cubes at row [row]</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.clear">
+<tt class="descname">clear</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.clear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resets the datacube to its initial state</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.clearRow">
+<tt class="descname">clearRow</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.clearRow" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets all values in the current row to 0</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.column">
+<tt class="descname">column</tt><big>(</big><em>name</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.column" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a given column of the datacube</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.columnName">
+<tt class="descname">columnName</tt><big>(</big><em>index</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.columnName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.columns">
+<tt class="descname">columns</tt><big>(</big><em>names</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.columns" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a table containing a set of given columns</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.commit">
+<tt class="descname">commit</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.commit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Commits a new line to the datacube</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.createColumn">
+<tt class="descname">createColumn</tt><big>(</big><em>name</em>, <em>values</em>, <em>offset=0</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.createColumn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a new column</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.dataManager">
+<tt class="descname">dataManager</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.dataManager" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pyview.lib.datacube.Datacube.defaults">
+<tt class="descname">defaults</tt><em class="property"> = {}</em><a class="headerlink" href="#pyview.lib.datacube.Datacube.defaults" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.description">
+<tt class="descname">description</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.description" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the description of the datacube</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.filename">
+<tt class="descname">filename</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.filename" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the filename of the datacube.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.goTo">
+<tt class="descname">goTo</tt><big>(</big><em>row=0</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.goTo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the current row to a given index</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.index">
+<tt class="descname">index</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the current row index.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.initialize">
+<tt class="descname">initialize</tt><big>(</big><em>name='datacube'</em>, <em>description=''</em>, <em>filename=None</em>, <em>dtype=&lt;type 'numpy.float64'&gt;</em>, <em>defaults=None</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.initialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initializes the data cube.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.load">
+<tt class="descname">load</tt><big>(</big><em>filename</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads the datacube from a pickled file</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.loadFromHdf5">
+<tt class="descname">loadFromHdf5</tt><big>(</big><em>path</em>, <em>verbose=False</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.loadFromHdf5" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.loadFromHdf5Object">
+<tt class="descname">loadFromHdf5Object</tt><big>(</big><em>dataFile</em>, <em>verbose=False</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.loadFromHdf5Object" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads the datacube from a HDF5 group</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.loadTable">
+<tt class="descname">loadTable</tt><big>(</big><em>filename</em>, <em>delimiter='t'</em>, <em>guessStructure=False</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.loadTable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads the table of the datacube from a text file</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.loadstr">
+<tt class="descname">loadstr</tt><big>(</big><em>string</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.loadstr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load the datacube from a pickled string</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.loadtxt">
+<tt class="descname">loadtxt</tt><big>(</big><em>path</em>, <em>format='yaml'</em>, <em>loadChildren=True</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.loadtxt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads the datacube from a text file</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.name">
+<tt class="descname">name</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the name of the datacube</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.names">
+<tt class="descname">names</tt><big>(</big><em>includeChildren=False</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.names" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns all column names of the datacube (and optionally also of all children)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.parameters">
+<tt class="descname">parameters</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the parameters of the data cube. The parameter dictionary is saved along with the datacube.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.parent">
+<tt class="descname">parent</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.parent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.removeChild">
+<tt class="descname">removeChild</tt><big>(</big><em>child</em>, <em>eraseChild=False</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.removeChild" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes a given child cube from the datacube</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.removeChildren">
+<tt class="descname">removeChildren</tt><big>(</big><em>cubes</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.removeChildren" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.removeColumn">
+<tt class="descname">removeColumn</tt><big>(</big><em>name</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.removeColumn" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.removeColumns">
+<tt class="descname">removeColumns</tt><big>(</big><em>names</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.removeColumns" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.removeRow">
+<tt class="descname">removeRow</tt><big>(</big><em>row</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.removeRow" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes a given row from the datacube.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.removeRows">
+<tt class="descname">removeRows</tt><big>(</big><em>rows</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.removeRows" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes a list of rows from the datacube.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.row">
+<tt class="descname">row</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.row" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the current row</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.rowAt">
+<tt class="descname">rowAt</tt><big>(</big><em>index</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.rowAt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a row at a given index</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.save">
+<tt class="descname">save</tt><big>(</big><em>filename</em>, <em>format='pickle'</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dumps the datacube to a pickled string</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.saveTable">
+<tt class="descname">saveTable</tt><big>(</big><em>filename</em>, <em>delimiter='t'</em>, <em>header=None</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.saveTable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Saves the data table to a given file</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.saveToHdf5">
+<tt class="descname">saveToHdf5</tt><big>(</big><em>path=None</em>, <em>saveChildren=True</em>, <em>overwrite=False</em>, <em>forceSave=False</em>, <em>verbose=False</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.saveToHdf5" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.saveToHdf5Object">
+<tt class="descname">saveToHdf5Object</tt><big>(</big><em>dataFile</em>, <em>saveChildren=True</em>, <em>overwrite=False</em>, <em>forceSave=False</em>, <em>verbose=False</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.saveToHdf5Object" title="Permalink to this definition">¶</a></dt>
+<dd><p>Saves the datacube to a HDF5 group</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.savetxt">
+<tt class="descname">savetxt</tt><big>(</big><em>path=None</em>, <em>saveChildren=True</em>, <em>overwrite=False</em>, <em>forceSave=False</em>, <em>allInOneFile=False</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.savetxt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Saves the datacube to a text file</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.search">
+<tt class="descname">search</tt><big>(</big><em>**kwargs</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.search" title="Permalink to this definition">¶</a></dt>
+<dd><p>Searches for a given combination of values in the datacube.
+Example: datacube.search(a = 4, b = -3,c = 2,start = 0) will return the index of the first row where a == 4, b == -3, c == 2,
+starting at index 0. If no row matches the given criteria, search will return [].</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.set">
+<tt class="descname">set</tt><big>(</big><em>**keys</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.set" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets a pair of variables in the current row</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.setAt">
+<tt class="descname">setAt</tt><big>(</big><em>index</em>, <em>**keys</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.setAt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets a set of variables at a given index</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.setChanged">
+<tt class="descname">setChanged</tt><big>(</big><em>changed=False</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.setChanged" title="Permalink to this definition">¶</a></dt>
+<dd><p>Marks the datacube as changed</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.setChildAttributes">
+<tt class="descname">setChildAttributes</tt><big>(</big><em>child</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.setChildAttributes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.setColumn">
+<tt class="descname">setColumn</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.setColumn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for createColumn...</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.setDescription">
+<tt class="descname">setDescription</tt><big>(</big><em>description</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.setDescription" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the description of the datacube</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.setFilename">
+<tt class="descname">setFilename</tt><big>(</big><em>filename</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.setFilename" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the filename of the datacube to <em>filename</em>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.setIndex">
+<tt class="descname">setIndex</tt><big>(</big><em>index</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.setIndex" title="Permalink to this definition">¶</a></dt>
+<dd><p>Synonym for goTo</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.setModified">
+<tt class="descname">setModified</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.setModified" title="Permalink to this definition">¶</a></dt>
+<dd><p>Marks the datacube as modified</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.setName">
+<tt class="descname">setName</tt><big>(</big><em>name</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.setName" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the name of the datacube</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.setParameters">
+<tt class="descname">setParameters</tt><big>(</big><em>params</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.setParameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the parameters of the datacube to <em>params</em></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.setParent">
+<tt class="descname">setParent</tt><big>(</big><em>parent</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.setParent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the parent of the data cube to <em>parent</em>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.setTags">
+<tt class="descname">setTags</tt><big>(</big><em>tags</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.setTags" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the tags of the datacube</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.sortBy">
+<tt class="descname">sortBy</tt><big>(</big><em>column</em>, <em>reverse=False</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.sortBy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sorts the datacube by a given variable</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.structure">
+<tt class="descname">structure</tt><big>(</big><em>tabs=''</em><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.structure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a string describing the structure of the datacube</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.table">
+<tt class="descname">table</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.table" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the data table</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.tags">
+<tt class="descname">tags</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.tags" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the tags of the datacube.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyview.lib.datacube.Datacube.toDataManager">
+<tt class="descname">toDataManager</tt><big>(</big><big>)</big><a class="headerlink" href="#pyview.lib.datacube.Datacube.toDataManager" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pyview.lib.datacube.Datacube.version">
+<tt class="descname">version</tt><em class="property"> = '0.2'</em><a class="headerlink" href="#pyview.lib.datacube.Datacube.version" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-lib.patterns">
+<span id="patterns"></span><h2>Patterns<a class="headerlink" href="#module-lib.patterns" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="lib.patterns.Dispatcher">
+<em class="property">class </em><tt class="descclassname">lib.patterns.</tt><tt class="descname">Dispatcher</tt><a class="headerlink" href="#lib.patterns.Dispatcher" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#lib.patterns.Subject" title="lib.patterns.Subject"><tt class="xref py py-class docutils literal"><span class="pre">lib.patterns.Subject</span></tt></a></p>
+<dl class="method">
+<dt id="lib.patterns.Dispatcher.clearQueue">
+<tt class="descname">clearQueue</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.patterns.Dispatcher.clearQueue" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.patterns.Dispatcher.dispatch">
+<tt class="descname">dispatch</tt><big>(</big><em>command</em>, <em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#lib.patterns.Dispatcher.dispatch" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.patterns.Dispatcher.dispatchCB">
+<tt class="descname">dispatchCB</tt><big>(</big><em>command</em>, <em>callback</em>, <em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#lib.patterns.Dispatcher.dispatchCB" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.patterns.Dispatcher.error">
+<tt class="descname">error</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.patterns.Dispatcher.error" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.patterns.Dispatcher.processQueue">
+<tt class="descname">processQueue</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.patterns.Dispatcher.processQueue" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.patterns.Dispatcher.queued">
+<tt class="descname">queued</tt><big>(</big><em>ID</em><big>)</big><a class="headerlink" href="#lib.patterns.Dispatcher.queued" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.patterns.Dispatcher.stop">
+<tt class="descname">stop</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.patterns.Dispatcher.stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.patterns.Dispatcher.stopped">
+<tt class="descname">stopped</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.patterns.Dispatcher.stopped" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.patterns.Dispatcher.unstop">
+<tt class="descname">unstop</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.patterns.Dispatcher.unstop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lib.patterns.KillableThread">
+<em class="property">class </em><tt class="descclassname">lib.patterns.</tt><tt class="descname">KillableThread</tt><big>(</big><em>group=None</em>, <em>target=None</em>, <em>name=None</em>, <em>args=()</em>, <em>kwargs=None</em>, <em>verbose=None</em><big>)</big><a class="headerlink" href="#lib.patterns.KillableThread" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">threading.Thread</span></tt></p>
+<dl class="method">
+<dt id="lib.patterns.KillableThread.raise_exc">
+<tt class="descname">raise_exc</tt><big>(</big><em>excobj</em><big>)</big><a class="headerlink" href="#lib.patterns.KillableThread.raise_exc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.patterns.KillableThread.terminate">
+<tt class="descname">terminate</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.patterns.KillableThread.terminate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lib.patterns.Observer">
+<em class="property">class </em><tt class="descclassname">lib.patterns.</tt><tt class="descname">Observer</tt><a class="headerlink" href="#lib.patterns.Observer" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="lib.patterns.Observer.updated">
+<tt class="descname">updated</tt><big>(</big><em>subject=None</em>, <em>property=None</em>, <em>value=None</em><big>)</big><a class="headerlink" href="#lib.patterns.Observer.updated" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lib.patterns.Reloadable">
+<em class="property">class </em><tt class="descclassname">lib.patterns.</tt><tt class="descname">Reloadable</tt><a class="headerlink" href="#lib.patterns.Reloadable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<dl class="method">
+<dt id="lib.patterns.Reloadable.beforeReload">
+<tt class="descname">beforeReload</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#lib.patterns.Reloadable.beforeReload" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.patterns.Reloadable.onReload">
+<tt class="descname">onReload</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#lib.patterns.Reloadable.onReload" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.patterns.Reloadable.reloadClass">
+<tt class="descname">reloadClass</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.patterns.Reloadable.reloadClass" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lib.patterns.Singleton">
+<em class="property">class </em><tt class="descclassname">lib.patterns.</tt><tt class="descname">Singleton</tt><a class="headerlink" href="#lib.patterns.Singleton" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<dl class="method">
+<dt id="lib.patterns.Singleton.delete">
+<tt class="descname">delete</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.patterns.Singleton.delete" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="exception">
+<dt id="lib.patterns.StopThread">
+<em class="property">exception </em><tt class="descclassname">lib.patterns.</tt><tt class="descname">StopThread</tt><a class="headerlink" href="#lib.patterns.StopThread" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></tt></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="lib.patterns.Subject">
+<em class="property">class </em><tt class="descclassname">lib.patterns.</tt><tt class="descname">Subject</tt><a class="headerlink" href="#lib.patterns.Subject" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="lib.patterns.Subject.attach">
+<tt class="descname">attach</tt><big>(</big><em>observer</em><big>)</big><a class="headerlink" href="#lib.patterns.Subject.attach" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.patterns.Subject.detach">
+<tt class="descname">detach</tt><big>(</big><em>observer</em><big>)</big><a class="headerlink" href="#lib.patterns.Subject.detach" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.patterns.Subject.notify">
+<tt class="descname">notify</tt><big>(</big><em>property=None</em>, <em>value=None</em>, <em>modifier=None</em><big>)</big><a class="headerlink" href="#lib.patterns.Subject.notify" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.patterns.Subject.observers">
+<tt class="descname">observers</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.patterns.Subject.observers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.patterns.Subject.setObservers">
+<tt class="descname">setObservers</tt><big>(</big><em>observers</em><big>)</big><a class="headerlink" href="#lib.patterns.Subject.setObservers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lib.patterns.ThreadedDispatcher">
+<em class="property">class </em><tt class="descclassname">lib.patterns.</tt><tt class="descname">ThreadedDispatcher</tt><a class="headerlink" href="#lib.patterns.ThreadedDispatcher" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#lib.patterns.Dispatcher" title="lib.patterns.Dispatcher"><tt class="xref py py-class docutils literal"><span class="pre">lib.patterns.Dispatcher</span></tt></a>, <a class="reference internal" href="#lib.patterns.KillableThread" title="lib.patterns.KillableThread"><tt class="xref py py-class docutils literal"><span class="pre">lib.patterns.KillableThread</span></tt></a></p>
+<dl class="method">
+<dt id="lib.patterns.ThreadedDispatcher.dispatch">
+<tt class="descname">dispatch</tt><big>(</big><em>command</em>, <em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#lib.patterns.ThreadedDispatcher.dispatch" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.patterns.ThreadedDispatcher.dispatchCB">
+<tt class="descname">dispatchCB</tt><big>(</big><em>command</em>, <em>callback</em>, <em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#lib.patterns.ThreadedDispatcher.dispatchCB" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.patterns.ThreadedDispatcher.restart">
+<tt class="descname">restart</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.patterns.ThreadedDispatcher.restart" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.patterns.ThreadedDispatcher.run">
+<tt class="descname">run</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.patterns.ThreadedDispatcher.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-lib.classes">
+<span id="classes"></span><h2>Classes<a class="headerlink" href="#module-lib.classes" title="Permalink to this headline">¶</a></h2>
+<p>Some convenience classes for managing instruments and frontpanels.</p>
+<dl class="class">
+<dt id="lib.classes.Command">
+<em class="property">class </em><tt class="descclassname">lib.classes.</tt><tt class="descname">Command</tt><big>(</big><em>name=None</em>, <em>args=</em><span class="optional">[</span><span class="optional">]</span>, <em>kwargs={}</em><big>)</big><a class="headerlink" href="#lib.classes.Command" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="lib.classes.Command.args">
+<tt class="descname">args</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.classes.Command.args" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="lib.classes.Command.fromString">
+<em class="property">classmethod </em><tt class="descname">fromString</tt><big>(</big><em>string</em><big>)</big><a class="headerlink" href="#lib.classes.Command.fromString" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.classes.Command.kwargs">
+<tt class="descname">kwargs</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.classes.Command.kwargs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.classes.Command.name">
+<tt class="descname">name</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.classes.Command.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.classes.Command.toString">
+<tt class="descname">toString</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.classes.Command.toString" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lib.classes.Instrument">
+<em class="property">class </em><tt class="descclassname">lib.classes.</tt><tt class="descname">Instrument</tt><big>(</big><em>name=''</em><big>)</big><a class="headerlink" href="#lib.classes.Instrument" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">pyview.lib.patterns.ThreadedDispatcher</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">pyview.lib.patterns.Reloadable</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<dl class="method">
+<dt id="lib.classes.Instrument.initialize">
+<tt class="descname">initialize</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#lib.classes.Instrument.initialize" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.classes.Instrument.name">
+<tt class="descname">name</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.classes.Instrument.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.classes.Instrument.parameters">
+<tt class="descname">parameters</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.classes.Instrument.parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Redefine this function to return all relevant instrument parameters in a dictionary.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.classes.Instrument.popState">
+<tt class="descname">popState</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.classes.Instrument.popState" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.classes.Instrument.pushState">
+<tt class="descname">pushState</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.classes.Instrument.pushState" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.classes.Instrument.restoreState">
+<tt class="descname">restoreState</tt><big>(</big><em>state</em><big>)</big><a class="headerlink" href="#lib.classes.Instrument.restoreState" title="Permalink to this definition">¶</a></dt>
+<dd><p>Restores the state of the instrument given by &#8220;state&#8221;.</p>
+<p>&#8220;state&#8221; can be of any type. For instruments that can store configuration data on a hard disk, &#8220;state&#8221; could be the name of the file on the disk.
+For other instruments, &#8220;state&#8221; could contain all relevant instrument parameters in a dictionary.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.classes.Instrument.saveState">
+<tt class="descname">saveState</tt><big>(</big><em>name</em><big>)</big><a class="headerlink" href="#lib.classes.Instrument.saveState" title="Permalink to this definition">¶</a></dt>
+<dd><p>Saves the state of the instrument.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lib.classes.RemoteInstrument">
+<em class="property">class </em><tt class="descclassname">lib.classes.</tt><tt class="descname">RemoteInstrument</tt><big>(</big><em>name</em>, <em>server</em>, <em>baseclass=None</em>, <em>args=</em><span class="optional">[</span><span class="optional">]</span>, <em>kwargs={}</em>, <em>forceReload=False</em><big>)</big><a class="headerlink" href="#lib.classes.RemoteInstrument" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">pyview.lib.patterns.ThreadedDispatcher</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">pyview.lib.patterns.Reloadable</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<dl class="method">
+<dt id="lib.classes.RemoteInstrument.getAttribute">
+<tt class="descname">getAttribute</tt><big>(</big><em>attr</em><big>)</big><a class="headerlink" href="#lib.classes.RemoteInstrument.getAttribute" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.classes.RemoteInstrument.name">
+<tt class="descname">name</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.classes.RemoteInstrument.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>We redefine name, since it is already defined as an attribute in Thread</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.classes.RemoteInstrument.remoteDispatch">
+<tt class="descname">remoteDispatch</tt><big>(</big><em>command</em>, <em>args=</em><span class="optional">[</span><span class="optional">]</span>, <em>kwargs={}</em><big>)</big><a class="headerlink" href="#lib.classes.RemoteInstrument.remoteDispatch" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.classes.RemoteInstrument.setAttribute">
+<tt class="descname">setAttribute</tt><big>(</big><em>attr</em>, <em>value</em><big>)</big><a class="headerlink" href="#lib.classes.RemoteInstrument.setAttribute" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lib.classes.ServerConnection">
+<em class="property">class </em><tt class="descclassname">lib.classes.</tt><tt class="descname">ServerConnection</tt><big>(</big><em>ip</em>, <em>port</em><big>)</big><a class="headerlink" href="#lib.classes.ServerConnection" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="lib.classes.ServerConnection.ip">
+<tt class="descname">ip</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.classes.ServerConnection.ip" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.classes.ServerConnection.openConnection">
+<tt class="descname">openConnection</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.classes.ServerConnection.openConnection" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lib.classes.ServerConnection.port">
+<tt class="descname">port</tt><big>(</big><big>)</big><a class="headerlink" href="#lib.classes.ServerConnection.port" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lib.classes.VisaInstrument">
+<em class="property">class </em><tt class="descclassname">lib.classes.</tt><tt class="descname">VisaInstrument</tt><big>(</big><em>name=''</em>, <em>visaAddress=None</em><big>)</big><a class="headerlink" href="#lib.classes.VisaInstrument" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#lib.classes.Instrument" title="lib.classes.Instrument"><tt class="xref py py-class docutils literal"><span class="pre">lib.classes.Instrument</span></tt></a></p>
+<p>A class representing an instrument that can be interfaced via NI VISA protocol.</p>
+<dl class="method">
+<dt id="lib.classes.VisaInstrument.executeVisaCommand">
+<tt class="descname">executeVisaCommand</tt><big>(</big><em>method</em>, <em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#lib.classes.VisaInstrument.executeVisaCommand" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function executes a VISA command.
+If the VISA connection was lost, it reopens the VISA handle.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.classes.VisaInstrument.getHandle">
+<tt class="descname">getHandle</tt><big>(</big><em>forceReload=False</em><big>)</big><a class="headerlink" href="#lib.classes.VisaInstrument.getHandle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the VISA handle for this instrument.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Library</a><ul>
+<li><a class="reference internal" href="#datacube">Datacube</a></li>
+<li><a class="reference internal" href="#module-lib.patterns">Patterns</a></li>
+<li><a class="reference internal" href="#module-lib.classes">Classes</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../index.html"
+                        title="previous chapter">Welcome to PyView documentation</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../gui/index.html"
+                        title="next chapter">Graphical User Interface</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/lib/index.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../gui/index.html" title="Graphical User Interface"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../index.html" title="Welcome to PyView documentation"
+             >previous</a> |</li>
+        <li><a href="../index.html">Qubit Project 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, Andreas Dewes.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+  </body>
+</html>
