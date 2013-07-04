@@ -152,11 +152,14 @@ class Manager(Subject,Singleton):
     result =  re.match(r'^rip\:\/\/(.*)\:(\d+)\/(.*)$',address)
     if result:
       (host,port,name) = result.groups(0)
+      print host, port, name
       try:
         remoteServer = ServerConnection(result.groups(0)[0],int(result.groups(0)[1]))
       except socket.error:
         print "Connection to remote host failed!"
         raise
+      except:
+          raise
     else:
       result = re.match(r'^http\:\/\/(.*)\:(\d+)\/(.*)$',address)
       if result:
@@ -239,7 +242,6 @@ class Manager(Subject,Singleton):
       else:
         return self._instruments[name.lower()].instrument()
     else:
-
       if self._isUrl(name):
         return self.initRemoteInstrument(name,baseclass,args,kwargs,forceReload)
 

@@ -196,6 +196,12 @@ class Datacube(Subject,Observer,Reloadable):
         return key
     return None
     
+  def defineDefaultPlot(self,x,y):
+    """
+    Define columns that has to be "auto"-plotted
+    """
+    self._parameters["defaultPlot"]= [x,y]
+
   def column(self,name):
     """
     Returns a given column of the datacube
