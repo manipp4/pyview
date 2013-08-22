@@ -4,11 +4,11 @@ import time
 import traceback
 from pyview.lib.patterns import KillableThread,Reloadable,StopThread,Subject
 from threading import RLock
-#import traceback         dv 02/2013
 import __builtin__,os.path
 
 _importFunction = __builtin__.__import__
 _moduleDates = dict()
+
 
 def _autoReloadImport(name,*a,**ka):
   global _importFunction
@@ -40,7 +40,8 @@ def disableModuleAutoReload():
   Disables the automatic reloading of modules when issuing an "import" statement.
   """
   __builtin__.__import__ = _importFunction  
-  
+def _ide():
+  return IDE  
 class CodeThread (KillableThread):
 
   """
@@ -63,7 +64,9 @@ class CodeThread (KillableThread):
     self._stop = False
     self._restart = True
     self._isBusy = False
-    
+
+
+
   def code(self):
     """
     Returns the code string that is executed by the class.
@@ -144,13 +147,15 @@ class CodeThread (KillableThread):
             self._callback(self)
       else:
         time.sleep(0.5)
-  
+
 
 class CodeRunner(Reloadable,Subject):
 
   """
   A class that manages the execution of code in different threads.
   """
+
+
 
   _id = 0
   
@@ -166,7 +171,7 @@ class CodeRunner(Reloadable,Subject):
     Subject.__init__(self)
     self._threadID = 0
     self.clear(gv = gv,lv = lv)
-    
+
   def clear(self,gv = dict(),lv = dict()):
     """
     Reinitializes the class and deletes all running threads.
@@ -303,6 +308,7 @@ class CodeRunner(Reloadable,Subject):
     if gv == None:
       gv = self._gv
     
+  
     if identifier in self._threads and self._threads[identifier].isAlive():
       #if a thread with that identifier exists and is running we tell it to execute our code...
       ct = self._threads[identifier]
@@ -331,7 +337,6 @@ class CodeRunner(Reloadable,Subject):
       self._threads[identifier] = ct
       ct.setDaemon(True)
       ct.start()
-
     return ct._id
     
 from multiprocessing import *
@@ -362,11 +367,15 @@ class CodeProcess(Process):
       pass
       
     def write(self,output):
+      #while(self._reading):
+      #  time.sleep(0.05)
+      self._writing=True
       self._queue.put(output)
+      self._writing=False
       
     def read(self,blocking = True):
       return self._queue.get(blocking)
-      
+
   def __init__(self):
     Process.__init__(self)
     self.daemon = True
@@ -376,7 +385,12 @@ class CodeProcess(Process):
     self._stderrQueue = Queue()
     self._stdinQueue = Queue()
     self._codeRunner = CodeRunner()
-    
+
+  def stdoutProxy(self):
+    return self.StreamProxy(self._stdoutQueue)
+  def stderrProxy(self):
+    return self.StreamProxy(self._stderrQueue)
+
   def commandQueue(self):
     return self._commandQueue
     
@@ -395,7 +409,7 @@ class CodeProcess(Process):
   def run(self):
     print "New code process up and running..."
     #sys.stderr = self.StreamProxy(self._stderrQueue)   DV
-    sys.stderr = self.StreamProxy(self._stdoutQueue)   #why not stderr?
+    sys.stderr = self.StreamProxy(self._stderrQueue)   #why not stderr?
     sys.stdout = self.StreamProxy(self._stdoutQueue)
     sys.stdin = self.StreamProxy(self._stdinQueue)
     while True:
@@ -414,13 +428,27 @@ class CodeProcess(Process):
               traceback.print_exc()
       except KeyboardInterrupt:
         print "Interrupt, exiting..."
-      
+
+  
 class MultiProcessCodeRunner():
   
-  def __init__(self,gv = dict(),lv = dict()):
+  def __init__(self,gv = dict(),lv = dict(),logProxy=lambda x:False,errorProxy=lambda x:False):
+
     self._codeProcess = CodeProcess()
     self._codeProcess.start()
     self._timeout = 2
+    self._stdoutQueue=self._codeProcess.stdoutQueue()
+    self._stderrQueue=self._codeProcess.stderrQueue()
+    self._stdoutProxy=self._codeProcess.stdoutProxy()
+    self._stderrProxy=self._codeProcess.stderrProxy()
+
+  def stderrQueue(self):
+    return self._stderrQueue
+
+  def stdoutQueue(self):
+    return self._stdoutQueue
+
+
 
   def __del__(self):
     self.terminate()

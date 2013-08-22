@@ -15,7 +15,8 @@ from pyview.lib.patterns import Singleton,Reloadable,ThreadedDispatcher,Subject,
 class DataManager(Singleton,Reloadable,ThreadedDispatcher,Subject,Observer):
   
   """
-  The DataManager is a Singleton class which can be used to keep track of datacubes. Just call addDatacube() to add a datacube to the DataManager. pyview.gui.datamanager.DataManager provides a graphical frontend of the DataManager class.
+  The DataManager is a Singleton class which can be used to keep track of datacubes. Just call addDatacube() to add a datacube to the DataManager.
+  pyview.gui.datamanager.DataManager provides a graphical frontend of the DataManager class.
   """
   
   def __init__(self,globals = {}):

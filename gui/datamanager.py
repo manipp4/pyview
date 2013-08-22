@@ -56,7 +56,7 @@ class Plot3DWidget(QWidget,ObserverWidget):
   def nameSelector(self):
     box = QComboBox()
     box.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-    names = self._cube.names()
+    names = self._cube.names(includeChildren=True)
     return box
     
   def updatePlot(self,clear = False):
@@ -67,6 +67,7 @@ class Plot3DWidget(QWidget,ObserverWidget):
       return
     xnames = []
     ynames = []
+    znames = []
     title = self._plots[0].cube.name()
     legend = []
     legendPlots = []
@@ -119,7 +120,7 @@ class Plot3DWidget(QWidget,ObserverWidget):
     if self._cube == None:
       return
 
-    if ((not plot.xname in self._cube.names()) and plot.xname != "[row number]") or ((not plot.yname in self._cube.names())  and plot.yname != "[row number]"):
+    if ((not plot.xname in self._cube.names(includeChildren=True)) and plot.xname != "[row number]") or ((not plot.yname in self._cube.names(includeChildren=True))  and plot.yname != "[row number]"):
       return
     plot.cube = self._cube 
     plot.legend = "%s, %s vs. %s" % (self._cube.name(),plot.xname,plot.yname)
@@ -165,17 +166,19 @@ class Plot3DWidget(QWidget,ObserverWidget):
         self._cube.detach(self)
     self._cube = cube
     cube.attach(self)
-    self.updateNames(cube.names())
+    self.updateNames(cube.names(includeChildren=True))
       
   def updateNames(self,names):
     self.xNames.clear()
     self.yNames.clear()
-    self.xNames.addItem("[row number]")
-    self.yNames.addItem("[row number]")
+    #self.xNames.addItem("[row number]")
+    #self.yNames.addItem("[row number]")
+    #self.zNames.addItem("[row number]")
     for name in sorted(names):
       self.xNames.addItem(name,name)    
       self.yNames.addItem(name,name)
-      
+      self.zNames.addItem(name,name)
+
   def updatedGui(self,subject = None,property = None,value = None):
     self._updated = False
     if property == "names":
@@ -208,6 +211,7 @@ class Plot3DWidget(QWidget,ObserverWidget):
     self.xnames = []
     self._currentIndex = None
     self.ynames = []
+    self.znames = []
     self._plottedVariables =[]
     self.legends = []
     self.cubes = []
@@ -231,11 +235,14 @@ class Plot3DWidget(QWidget,ObserverWidget):
     self.showLegend = QCheckBox("Show Legend")
     self.showLegend.setCheckState(Qt.Checked)
     self.yNames.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+    self.zNames = QComboBox()
 
     playout = QBoxLayout(QBoxLayout.LeftToRight)
     playout.addWidget(QLabel("X:"))
     playout.addWidget(self.xNames)
     playout.addWidget(QLabel("Y:"))
+    playout.addWidget(self.zNames)
+    playout.addWidget(QLabel("Z:"))
     playout.addWidget(self.yNames)
     playout.addWidget(self.addButton)
     playout.addWidget(self.showLegend)

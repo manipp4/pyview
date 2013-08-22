@@ -20,13 +20,6 @@ from pyview.helpers.coderunner import MultiProcessCodeRunner
 from pyview.gui.patterns import ObserverWidget
 from pyview.config.parameters import params
 
-class LogProxy:
-  
-  def __init__(self,callback):
-    self._callback = callback
-    
-  def write(self,text):
-    self._callback(text)
 
 class Log(LineTextWidget):
 
@@ -38,7 +31,10 @@ class Log(LineTextWidget):
       -Add a search function
     """
 
-    def __init__(self,parent = None ):
+    def __init__(self,queue,ide=None,tabID=0,parent = None):
+        self._ide=ide
+        self._queue=queue
+        self._tabID=tabID
         LineTextWidget.__init__(self,parent)
         MyFont = QFont("Courier",10)
         MyDocument = self.document() 
@@ -48,7 +44,7 @@ class Log(LineTextWidget):
         self.setReadOnly(True)
         self.timer = QTimer(self)     # instantiate a timer in this LineTextWidget 
         self._writing = False
-        self.timer.setInterval(300)   # set its timeout to 0.3s
+        self.timer.setInterval(20)   # set its timeout to 0.3s
         self.queuedStdoutText = ""    #initialize a Stdout queue to an empty string
         self.queuedStderrText = ""    #initialize a Stderr queue to an empty string
         self.connect(self.timer,SIGNAL("timeout()"),self.addQueuedText)
@@ -56,60 +52,40 @@ class Log(LineTextWidget):
         self.timer.start()            # start the timer
         self.cnt=0
         
+    def clearLog(self):
+      self.clear()
+              
     def contextMenuEvent(self,event):
       MyMenu = self.createStandardContextMenu()
       MyMenu.addSeparator()
       clearLog = MyMenu.addAction("clear log")
       self.connect(clearLog,SIGNAL("triggered()"),self.clearLog)
       MyMenu.exec_(self.cursor().pos())
-
-    def clearLog(self):
-      self.clear()
-        
+      
     def addQueuedText(self):
-    #Insert in the text widget the text present in the queuedStdoutText and queuedStderrText queues
-      if self._writing:
-        return
-      if self.queuedStderrText == "" and self.queuedStdoutText == "":
-        return
-      self.moveCursor(QTextCursor.End)
-      if self.queuedStdoutText != "":
-        # errors appear at queuedStdoutText instead of queuedStderrText => Why ???
-        self.textCursor().insertText(self.queuedStdoutText)
-      #Insert error messages with an orange background color.
-      if self.queuedStderrText != "":
-        cursor.movePosition(QTextCursor.End)
-        oldFormat = cursor.blockFormat()
-        format = QTextBlockFormat()
-        format.setBackground(QColor(255,200,140))
-        cursor.insertBlock(format)
-        cursor.insertText(self.queuedStderrText)
-        cursor.movePosition(QTextCursor.EndOfBlock,QTextCursor.KeepAnchor)
-        cursor.setBlockFormat(oldFormat)
+        self._ide.logTabs.setTabIcon(self._ide.logTabs.currentIndex(),QIcon())
+        try:
+          message=''
+          try:
+            while(True):
+              message+=self._queue.get(True,0.01)
+          except:
+            pass
+          if message!='':
+            self.moveCursor(QTextCursor.End)
+            if self._ide.logTabs.currentIndex()!=self._tabID:
+              self._ide.logTabs.setTabIcon(self._tabID,self._ide._icons['killThread'])
+            self.textCursor().insertText(message)
+            self.moveCursor(QTextCursor.End)
+        except:
+          pass
 
-      self.queuedStdoutText = ""
-      self.queuedStderrText = ""
-    
-    def writeStderr(self,text):
-    # push some text in the queuedStderrText queue
-      while self._writing:
-        time.sleep(0.1)
-      try:
-        self._writing = True
-        self.queuedStderrText += text      
-      finally:
-        self._writing = False
-        
-    def writeStdout(self,text):
-    # push some text in the queuedStdoutText queue
-      while self._writing:
-        time.sleep(0.1)
-      try:
-        self._writing = True
-        self.queuedStdoutText += text
-      finally:
-        self._writing = False
-        
+
+
+
+
+
+
 class IDE(QMainWindow,ObserverWidget):
 
     """
@@ -234,7 +210,7 @@ class IDE(QMainWindow,ObserverWidget):
         poc="current block"
       else:
         poc="???"
-      print "Running "+poc+" in "+shortFileName+" (id="+str(identifier)+")"    
+      print("Running "+poc+" in "+shortFileName+" (id="+str(identifier)+")")    
       self.executeCode(code,filename = filename,editor = editor,identifier = identifier)
       return True
     
@@ -267,7 +243,7 @@ class IDE(QMainWindow,ObserverWidget):
         for node in selectedNodes:
           self.runFileOrFolder(node)      
       elif type(widgetWithFocus) == QTreeWidget:
-        print "Run from QTreeWidget not implemented yet"
+        print("Run from QTreeWidget not implemented yet")
       return False
                        
     def eventFilter(self,object,event):  #modification dv 7/02/2013
@@ -309,7 +285,7 @@ class IDE(QMainWindow,ObserverWidget):
       self.workingPathLabel.setText("Working path:"+path)
                       
     def setupCodeEnvironmentCallback(self,thread):
-      print "Done setting up code environment..."
+      print("Done setting up code environment...")
       
     def setupCodeEnvironment(self):
       pass
@@ -322,12 +298,13 @@ class IDE(QMainWindow,ObserverWidget):
       for session in self._runningCodeSessions:
         (code,identifier,filename,editor) = session
         if editor == currentEditor:
-          print "Stopping execution..."
+          print("Stopping execution...")
           self._codeRunner.stopExecution(identifier)
           
     def onTimer(self):
-      sys.stdout.write(self._codeRunner.stdout())
-      sys.stderr.write(self._codeRunner.stderr())
+      return
+      #sys.stdout.write(self._codeRunner.stdout())
+      #sys.stderr.write(self._codeRunner.stderr())
               
     def newEditorCallback(self,editor):
       editor.installEventFilter(self)
@@ -492,15 +469,36 @@ class IDE(QMainWindow,ObserverWidget):
         self.connect(self._timer,SIGNAL("timeout()"),self.onTimer)
         self._timer.start()
         
-        self.MyLog = Log()
+        self.initializeIcons()
+
         gv = dict()
+
         self._codeRunner = MultiProcessCodeRunner(gv = gv,lv = gv)
         self.editorWindow = CodeEditorWindow(self,newEditorCallback = self.newEditorCallback)   # tab editor window
         self.errorConsole = ErrorConsole(codeEditorWindow = self.editorWindow,codeRunner = self._codeRunner)
-        
+
+        sys.stdout=self._codeRunner._stdoutProxy
+        sys.stderr=self._codeRunner._stderrProxy
+
+
+
         self.logTabs = QTabWidget()
-        self.logTabs.addTab(self.MyLog,"Log")
-        self.logTabs.addTab(self.errorConsole,"Traceback")
+        stdoutLog = Log(self._codeRunner.stdoutQueue(),ide=self,tabID=0)
+        self.logTabs.addTab(stdoutLog,"&Log")
+        stderrLog = Log(self._codeRunner.stderrQueue(),ide=self,tabID=1)
+        self.logTabs.addTab(stderrLog,"&Error")
+
+        #sys.stdout=self._codeRunner.stdoutQueue()
+        #sys.stderr=self._codeRunner.stderrQueue()
+
+        try:
+          sys.sdtout=self._codeRunner.stdoutQueue()
+          sys.sdterr=self._codeRunner.stderrQueue()
+        except:
+          raise
+        finally:
+          pass
+
                
         verticalSplitter = QSplitter(Qt.Vertical)       # outer verticalsplitter
         horizontalSplitter = QSplitter(Qt.Horizontal)   # upper horizontal plitter in outer splitter   
@@ -555,17 +553,19 @@ class IDE(QMainWindow,ObserverWidget):
          
         self.queuedText = ""        
         self.logTabs.show()
-        
-        self.errorProxy = LogProxy(self.MyLog.writeStderr)
-        self.eventProxy = LogProxy(self.MyLog.writeStdout)
-         
+
+        #self.errorProxy = LogProxy(self.MyLog.writeStderr)
+
+       
         settings = QSettings()
 
         if settings.contains('ide.workingpath'):
           self.changeWorkingPath(settings.value('ide.workingpath').toString())
 
-        sys.stdout = self.eventProxy
-        sys.stderr = self.errorProxy
+        #sys.stdout = self.eventProxy
+        #sys.stderr = self.errorProxy
+        #sys.stderr = self.errorProxy
+        
         self.logTabs.show() 
 
         self.setProject(Project())
@@ -575,7 +575,7 @@ class IDE(QMainWindow,ObserverWidget):
             self.openProject(str(settings.value("ide.lastproject").toString()))
             lastProjectOpened=True      
           except:
-            print "Cannot open last project: %s " % str(settings.value("ide.lastproject").toString())
+            print("Cannot open last project: %s " % str(settings.value("ide.lastproject").toString()))
         if lastProjectOpened and self.runStartupGroup.isChecked(): 
           childrenLevel1= self.projectModel.project().children()
           found=False
@@ -584,7 +584,8 @@ class IDE(QMainWindow,ObserverWidget):
               self.runFileOrFolder(child)
               found=True
           if not found:
-            print "No \"startup\" file or folder at tree level 1 in current project"       
+            print("No \"startup\" file or folder at tree level 1 in current project" )      
+
 
 def startIDE(qApp = None):
   if qApp == None:

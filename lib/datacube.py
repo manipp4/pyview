@@ -410,7 +410,7 @@ class Datacube(Subject,Observer,Reloadable):
     return DataManager()
 
   def toDataManager(self):
-    dataManager = DataManager()
+    dataManager = self.dataManager()
     dataManager.addDatacube(self)
 
   def autoPlot(self,clear = False):
@@ -441,6 +441,18 @@ class Datacube(Subject,Observer,Reloadable):
     """
     self._meta["modificationTime"] = time.asctime()
     self._unsaved = True
+
+  def attributesOfChildren(self):
+    class Attributes(list):
+      def addToList(self,obj): 
+        if not(obj in self): self.append(obj)
+    attributes=Attributes()
+    for child in self.children():
+      for k in self.attributesOfChild(child).keys():
+        attributes.addToList(k)
+    return attributes
+
+
 
   def attributesOfChild(self,child):
     if child in map(lambda x:x.datacube(),self._children):
