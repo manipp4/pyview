@@ -329,6 +329,7 @@ class Plot3DWidget(QWidget,ObserverWidget):
   def addDefaultPlot(self):
     if 'defaultPlot' in self._cube.parameters():
       for params in self._cube.parameters()["defaultPlot"]:
+        print params
         if len(params) == 3:
           (xName,yName,kwargs) = params
         else:
@@ -410,25 +411,29 @@ class Plot2DWidget(QWidget,ObserverWidget):
 
     if self._cube == None:
       return
-
-    if ((not plot.xname in self._cube.names()) and plot.xname != "[row number]") or ((not plot.yname in self._cube.names())  and plot.yname != "[row number]"):
-      return
+    
+    self._plots.append(plot)
+    
+#    if ((not plot.xname in self._cube.names()) and plot.xname != "[row number]") or ((not plot.yname in self._cube.names())  and plot.yname != "[row number]"):
+#      print "no row"
+      #return
     plot.cube = self._cube 
     plot.legend = "%s, %s vs. %s" % (self._cube.name(),plot.xname,plot.yname)
     plot.style = 'line'
-    if plot.xname != "[row number]":
-      xvalues = plot.cube.column(plot.xname)
-    else:
-      xvalues = arange(0,len(plot.cube),1)
-    if plot.yname != "[row number]":
-      yvalues = plot.cube.column(plot.yname)
-    else:
-      yvalues = arange(0,len(plot.cube),1)
+    xvalues,yvalues=[[],[]]
+    if not(((not plot.xname in self._cube.names()) and plot.xname != "[row number]") or ((not plot.yname in self._cube.names())  and plot.yname != "[row number]")):
+      if plot.xname != "[row number]":
+        xvalues = plot.cube.column(plot.xname)
+      else:
+        xvalues = arange(0,len(plot.cube),1)
+      if plot.yname != "[row number]":
+        yvalues = plot.cube.column(plot.yname)
+      else:
+        yvalues = arange(0,len(plot.cube),1)
     plot.lines, = self.canvas.axes.plot(xvalues,yvalues,**kwargs)
     self._cnt+=1
     plot.cube.attach(self)
     plot.lineStyleLabel = QLabel("line style") 
-    self._plots.append(plot)
     
     plotItem = QTreeWidgetItem([self._cube.name(),plot.xname,plot.yname,"line"])
     self.plotList.addTopLevelItem(plotItem)
@@ -520,6 +525,7 @@ class Plot2DWidget(QWidget,ObserverWidget):
     self.timer.start()
     self.props = QWidget()
     self.canvas = MyMplCanvas(dpi = 72,width = 8,height = 4)
+
     splitter.addWidget(self.canvas)
     splitter.addWidget(self.props)
     propLayout = QGridLayout()
@@ -635,13 +641,22 @@ class Plot2DWidget(QWidget,ObserverWidget):
             break
         if found:
           continue
-        self.addPlot(xName=xName,yName=yName,**kwargs)
+        self.addPlot(xName=xName,yName=yName,**kwargs)  
+
+  def plot(self,xName,yName):
+      found=False
+      for plot in self._plots:
+        if plot.xname == xName and plot.yname == yName and plot.cube == self._cube:
+          found = True
+          break
+      self.addPlot(xName=xName,yName=yName)
 
 class DataTreeView(QTreeWidget,ObserverWidget):
     
   def __init__(self,parent = None):
     QTreeWidget.__init__(self,parent)
     ObserverWidget.__init__(self)
+    self._parent=parent
     self._items = dict()
     self._manager = dm.DataManager()
     self._manager.attach(self)
@@ -656,10 +671,18 @@ class DataTreeView(QTreeWidget,ObserverWidget):
     menu = QMenu(self)
     saveAsAction = menu.addAction("Save as...")
     removeAction = menu.addAction("Remove")
+    markAsGoodAction = menu.addAction("Mark as Good")
+    markAsBadAction = menu.addAction("Mark as Bad")
     action = menu.exec_(self.viewport().mapToGlobal(event.pos()))
     if action == saveAsAction:
-      pass
-      
+      if self._parent!=None: self._parent.saveCubeAs()
+    elif action== removeAction:
+      if self._parent!=None: self._parent.removeCube()
+    elif action == markAsGoodAction:
+      if self._parent!=None: self._parent.markAsGood()
+    elif  action== markAsBadAction:
+      if self._parent!=None: self._parent.markAsBad()
+
   def selectDatacube(self,datacube):
     if self.ref(datacube) in self._items:
       item = self._items[self.ref(datacube)]
@@ -777,7 +800,6 @@ class DatacubeProperties(QWidget,ObserverWidget):
       return
     self._cube.setName(self.name.text())
 
-
   def tagsChanged(self,text):
     if self._cube == None:
       return
@@ -825,7 +847,13 @@ class DataManager(QMainWindow,ObserverWidget):
         self.dataPlotter2D.clearPlots()
       self.dataPlotter2D.addDefaultPlot()
       self.tabs.setCurrentWidget(self.dataPlotter2D)
-  
+    if subject == self.manager and property == "plot":
+      datacube,xname,yname,clear=value
+      self.datacubeList.selectDatacube(datacube)
+      if clear:
+        self.dataPlotter2D.clearPlots()
+      self.dataPlotter2D.plot(xname,yname)
+      self.tabs.setCurrentWidget(self.dataPlotter2D)
         
   def workingDirectory(self):
     if self._workingDirectory == None: 
@@ -917,6 +945,13 @@ class DataManager(QMainWindow,ObserverWidget):
     else:
       self._cube.savetxt()
   
+  def sendToIgor(self):
+    """
+    Send the selected datacube to igor
+    """
+    self._cube.sentToIgor()
+
+
   def __init__(self,parent = None,globals = {}):
     QMainWindow.__init__(self,parent)
     ObserverWidget.__init__(self)
@@ -937,7 +972,7 @@ class DataManager(QMainWindow,ObserverWidget):
     splitter = QSplitter(Qt.Horizontal)
 
 
-    self.datacubeList = DataTreeView()
+    self.datacubeList = DataTreeView(parent =self)
     self.datacubeViewer = DatacubeTableView()
     self.connect(self.datacubeList,SIGNAL("currentItemChanged(QTreeWidgetItem *,QTreeWidgetItem *)"),self.selectCube)
     self.dataPlotter2D = Plot2DWidget()
@@ -965,7 +1000,9 @@ class DataManager(QMainWindow,ObserverWidget):
     filemenu.addSeparator()
     markAsGood = filemenu.addAction("Mark as Good")
     markAsBad = filemenu.addAction("Mark as Bad")
-    
+    filemenu.addSeparator()
+    sendToIgor=filemenu.addAction("Send to IgorPro")    
+
     self.connect(loadDatacube,SIGNAL("triggered()"),self.loadDatacube)
     self.connect(newDatacube,SIGNAL("triggered()"),self.addCube)
     self.connect(saveDatacube,SIGNAL("triggered()"),self.saveCube)
@@ -973,6 +1010,7 @@ class DataManager(QMainWindow,ObserverWidget):
     self.connect(removeDatacube,SIGNAL("triggered()"),self.removeCube)
     self.connect(markAsGood,SIGNAL("triggered()"),self.markAsGood)
     self.connect(markAsBad,SIGNAL("triggered()"),self.markAsBad)
+    self.connect(sendToIgor,SIGNAL("triggered()"),self.sendToIgor)
     
     menubar.addMenu(filemenu)
     

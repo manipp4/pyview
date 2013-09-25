@@ -76,6 +76,9 @@ class Manager(Subject,Singleton):
     Return a dictionary containing the parameters of all the instruments.
     """
     state = dict()
+    print instruments
+    instruments=[instrument.name().lower() for instrument in instruments]
+    print instruments
     for name in self._instruments.keys():
       try:
         if instruments == [] or name in instruments:
@@ -90,8 +93,39 @@ class Manager(Subject,Singleton):
         print "Could not save the state of instrument %s:" % name
         print traceback.print_exc()
     return state
+
+  def saveStateAs(self,filename,stateName=None,instruments=[]):
+    """
+    Save state of instruments under file
+    """
+    instrumentsObjects=[self.getInstrument(name) for name in instruments]
+    state=self.saveState(stateName=stateName,instruments=instrumentsObjects,withInitialization=True)
+    filename=str(filename)
+    stateString = yaml.dump(state)
+    stateDir = os.path.dirname(filename)
+    if not os.path.exists(stateDir):
+        os.mkdir(stateDir)
+    file = open(filename,"w")
+    file.write(stateString)
+    file.close()
     
-  
+  def loadAndRestoreState(self,filename,instruments=[]):
+    stateFile = open(filename)
+    states = yaml.load(stateFile.read())          
+    stateFile.close()
+    print "keys",states.keys()
+    instruments=[instrument.lower() for instrument in instruments]
+    for instrument in instruments:
+      print instrument, type(instrument)
+      if states.has_key(instrument):
+          self.getInstrument(instrument).restoreState(states[instrument]["state"])
+
+#    self.restoreState(data)
+
+
+
+
+
   def restoreState(self,state,withInitialization = True):
     """
     Restores the state of all instruments that are references in the "state" parameter AND that are already loaded.

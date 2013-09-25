@@ -1,10 +1,16 @@
 """
 Some convenience classes for managing instruments and frontpanels.
 """
+try:
+  import win32com.client
+  import pythoncom
+except:
+  print "Cannot import win32com.client or pythoncom"
 
 import traceback
 import socket
-
+import yaml
+import os
 try:
   import visa                         
   from visa import VI_ERROR_CONN_LOST,VI_ERROR_INV_OBJECT
@@ -14,9 +20,9 @@ try:
 except:
   print "Cannot import Visa!"
 
-DEBUG = False
 
 from pyview.lib.patterns import *
+DEBUG = False
 
 class Instrument(ThreadedDispatcher,Reloadable,object):
   
@@ -33,11 +39,13 @@ class Instrument(ThreadedDispatcher,Reloadable,object):
     
   def __str__(self):
     return "Instrument \"%s\"" % self.name()
-    
+
+
   def saveState(self,name):
     """
     Saves the state of the instrument.
     """
+    print "Instrument %s return no state."%self._name
     return None
     
   def pushState(self):
@@ -49,6 +57,15 @@ class Instrument(ThreadedDispatcher,Reloadable,object):
       state = self._states.pop()
       self.restoreState(state)
     
+  def loadAndRestoreState(self,filename):
+    stateFile = open(filename)
+    data = yaml.load(stateFile.read())          
+    stateFile.close()
+    print data,type(data)
+    self.restoreState(data)
+
+
+
   def restoreState(self,state):
     """
     Restores the state of the instrument given by "state".
@@ -254,3 +271,56 @@ class RemoteInstrument(ThreadedDispatcher,Reloadable,object):
     """
     return self.ask(request)
         
+
+class IgorCommunicator:
+  """
+  A class used to communicate with IgorPro using ActiveX
+  """
+  def __init__(self,new=False):
+    """
+    Initialization
+    """
+    try:
+      pythoncom.CoInitialize()
+      self._app=win32com.client.Dispatch("IgorPro.Application") 
+      self._app.Visible=1
+    except:
+      raise Exception("Unable to load IgorPro ActiveX Object")
+    
+  def execute(self, command):
+    """
+    Execution of single-line command (str)
+    Return results (str or None)
+    """
+    flag_nolog = 0
+    code_page = 0
+    err_code = 0
+    result_tuple = self._app.Execute2(flag_nolog, code_page, command,err_code)
+    err_code, err_msg, history, results = result_tuple
+    if len(err_msg)>1:
+      raise Exception("Active X IgorApp exception: \n  Command : \"" + command +"\"\n  Returns : \""+ err_msg+"\"")
+    return str(results)
+    
+  def run(self,commands):
+    """
+    Execute multi-lines commands, ie list of strings
+    return list or results for each single-line
+    """
+    if len(commands)<1:
+      return ''
+    results=[]
+    for command in commands:
+      result=self.execute(command)
+      if result!='':
+        results.append(result)
+    return results
+
+  def __call__(self,commands):
+    """
+    'smart' alias of run ie. encapsulate commands in [] if commands is a string
+    """
+    if type(commands)==type("string"):
+      return self.run([commands])
+    elif type(commands)==type([]):
+      return self.run(commands)
+    else: raise Exception("IgorApp badly called")

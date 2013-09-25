@@ -16,43 +16,73 @@ from math import fabs
 class FigureManager(FigureManagerQTAgg):
   pass
 
+class CanvasDialogTab(QWidget):
+
+  def __init__(self,parent = None):
+    QWidget.__init__(self,parent)
+    self.layout = QGridLayout()
+    self.setLayout(self.layout)
+    self._options=dict()
+
+  def addOption(self,name,enterType,defaultValue=None):
+    if enterType=="QLineEdit":
+      self._options[name] = QLineEdit()
+      self._options[name].setText(str(defaultValue))
+      self.layout.addWidget(QLabel(name+": "))
+      self.layout.addWidget(self._options[name])
+    elif enterType=="QCheckBox":
+      self._options[name] = QCheckBox(name)
+      self.layout.addWidget(self._options[name])
+
+
 class CanvasDialog(QDialog):
   
   def __init__(self,canvas,parent = None):
+
+    try:
+      reload(sys.modules["pyview.gui.mpl.canvas"])
+      from pyview.gui.mpl.canvas import CanvasDialogTab
+    except:
+      raise Error("Unable to import CanvasDialogTab")
+
     QDialog.__init__(self,parent)
-    self.setFixedWidth(640)
+    self.setFixedWidth(200)
     layout = QGridLayout()
     self.setLayout(layout)
     self._canvas = canvas
     self.setWindowTitle(self._canvas.title()+" properties")
     self.tabs = QTabWidget()
     layout.addWidget(self.tabs,0,0)
-    self.codeEditor = CodeEditor()
-    self.codeEditor.activateHighlighter()
-    if self._canvas.extraCode() != None:
-      self.codeEditor.setPlainText(self._canvas.extraCode())
     self.cancelButton = QPushButton("Cancel")
-    self.updateButton = QPushButton("Update")
-    self.OKButton = QPushButton("OK")
+    self.applyButton = QPushButton("Apply")
     buttonsLayout = QBoxLayout(QBoxLayout.RightToLeft)
+    buttonsLayout.addWidget(self.applyButton)
     buttonsLayout.addWidget(self.cancelButton)
-    buttonsLayout.addWidget(self.updateButton)
-    buttonsLayout.addWidget(self.OKButton,)
     buttonsLayout.addStretch(0)
     layout.addLayout(buttonsLayout,1,0)
-    self.tabs.addTab(self.codeEditor,"Custom code")
-    self.connect(self.updateButton,SIGNAL("clicked()"),self.updateFigure)
-    self.connect(self.OKButton,SIGNAL("clicked()"),self.updateAndClose)
+
+    self.scaleTab=CanvasDialogTab(self)
+
+    self.scaleTab.addOption("Autorange","QCheckBox")
+    self.scaleTab.addOption("X Min","QLineEdit",self._canvas.axes.get_xlim()[0])
+    self.scaleTab.addOption("X Max","QLineEdit",self._canvas.axes.get_xlim()[1])
+    self.scaleTab.addOption("Y Min","QLineEdit",self._canvas.axes.get_ylim()[0])
+    self.scaleTab.addOption("Y Max","QLineEdit",self._canvas.axes.get_ylim()[1])
+
+
+    self.tabs.addTab(self.scaleTab,"Scale")
     self.connect(self.cancelButton,SIGNAL("clicked()"),self.close)
-    
-  def updateAndClose(self):
-    self.updateFigure()
+    self.connect(self.applyButton,SIGNAL("clicked()"),self.apply)
+
+  def apply(self):
+    if self.scaleTab._options["Autorange"].isChecked():
+      self._canvas.autoScale()
+    else:
+      self._canvas.axes.set_xlim(float(self.scaleTab._options["X Min"].text()),float(self.scaleTab._options["X Max"].text()))
+      self._canvas.axes.set_ylim(float(self.scaleTab._options["Y Min"].text()),float(self.scaleTab._options["Y Max"].text()))
+      self._canvas.axes.set_autoscale_on(False) 
+      self._canvas.draw()
     self.close()
-    
-  def updateFigure(self):
-    self._canvas.draw()
-    self._canvas.setExtraCode(str(self.codeEditor.toPlainText()))
-    self._canvas.execExtraCode()
 
 class MyMplCanvas(FigureCanvas):
 
@@ -125,6 +155,7 @@ class MyMplCanvas(FigureCanvas):
       autoscaleAction = menu.addAction("Autoscale / Zoom Out")
       saveAsAction = menu.addAction("Save figure as...")
       fastDisplayAction = menu.addAction("Open as PDF")
+      toPrinterAction = menu.addAction("Print")
       propertiesAction = menu.addAction("Properties")
       fontSizeMenu = menu.addMenu("Font size")
       fontSizes = dict()
@@ -170,8 +201,8 @@ class MyMplCanvas(FigureCanvas):
             self.draw()
       elif action == propertiesAction:
         try:
-          reload(sys.modules["pyview.lib.canvas"])
-          from pyview.lib.canvas import CanvasDialog
+          reload(sys.modules["pyview.gui.mpl.canvas"])
+          from pyview.gui.mpl.canvas import CanvasDialog
         except ImportError:
           pass
         if not self._dialog == None:
@@ -179,6 +210,8 @@ class MyMplCanvas(FigureCanvas):
         self._dialog = CanvasDialog(self)
         self._dialog.setModal(False)
         self._dialog.show()
+      elif action == toPrinterAction:
+        self.toPrinter()
       elif action == autoscaleAction:
         self.autoScale()
       for fontSize in fontSizes.keys():
@@ -186,13 +219,50 @@ class MyMplCanvas(FigureCanvas):
           print "Setting font size to %d" % fontSize
           rcParams['font.size'] = str(fontSize)
           self.draw()
-                         
+
+    def setScale(self,w,h):
+      """
+      Set size w,h
+      Return previous size
+      """
+      (wOld,hOld) = self._fig.get_size_inches()
+      self._fig.set_size_inches(w, h)
+      return wOld, hOld
+
+    def toPrinter(self):
+      (w,h)=self.setScale(4,6)
+      dialog = QPrintDialog(self.printer)
+      dialog.setModal(True)
+      dialog.setWindowTitle("Print Document" )
+      dialog.addEnabledOption(QAbstractPrintDialog.PrintSelection)
+      if dialog.exec_() == True:
+
+        painter = QPainter(self.printer)
+        
+        xscale = self.printer.pageRect().width()/self.width()
+        yscale = self.printer.pageRect().height()/self.height()
+        scale = min(xscale, yscale)
+        painter.translate(self.printer.paperRect().x() + self.printer.pageRect().width()/2,0)#self.printer.paperRect().y() + self.printer.pageRect().height()/2)
+        painter.scale(scale, scale)
+        painter.translate(-self.width()/2, 0)#-self.height()/2);
+        
+        self._moveLabel.hide()
+        pixmap=QPixmap.grabWidget(self)
+        painter.drawPixmap(0,0,pixmap)
+
+
+
+
+
+        painter.end()
+      self.setScale(w,h)
+
     def autoScale(self):
       self.axes.set_autoscale_on(True)
       self.axes.relim() 
       self.axes.autoscale_view()
       self.draw()
-      
+
     def onPaint(self,painter):
       print "painting..."
     
@@ -227,14 +297,15 @@ class MyMplCanvas(FigureCanvas):
         self._height = height
         self._dpi = dpi
         self._pressed = False
+
+        self.printer=QPrinter()
+
         FigureCanvas.__init__(self, fig)
         
 #        self.setFixedWidth(self._dpi*self._width)
 #        self.setFixedHeight(self._dpi*self._height)
-        
+
         self._isDrawing = False
-        #self._extraCode = """#axes.set_title("test")
-#axes.set_xlabel("frequency [GHz]")"""
         self.axes = fig.add_subplot(111)
         self.axes.set_autoscale_on(True) 
         self.axes.hold(True)

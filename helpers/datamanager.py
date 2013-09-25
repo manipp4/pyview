@@ -30,6 +30,13 @@ class DataManager(Singleton,Reloadable,ThreadedDispatcher,Subject,Observer):
     Subject.__init__(self)
     self._datacubes = []
     self._globals = globals
+
+  def plot(self,datacube,xname,yname,clear=False):
+    """
+    Trigger a plot of yname vs yname of the datacube
+    """
+    #self.addDatacube(datacube)
+    self.notify("plot",[datacube,xname,yname,clear])
   
   def autoPlot(self,datacube,clear = False):
     """

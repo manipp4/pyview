@@ -15,6 +15,7 @@ import string
 
 from pyview.helpers.datamanager import DataManager
 from pyview.lib.patterns import Subject,Observer,Reloadable
+from pyview.lib.classes import *
 
 class ChildItem:
   
@@ -200,7 +201,10 @@ class Datacube(Subject,Observer,Reloadable):
     """
     Define columns that has to be "auto"-plotted
     """
-    self._parameters["defaultPlot"]= [x,y]
+    if self._parameters.has_key("defaultPlot"):
+      self._parameters["defaultPlot"].append([x,y])
+    else:
+      self._parameters["defaultPlot"]= [[x,y]]
 
   def column(self,name):
     """
@@ -215,6 +219,7 @@ class Datacube(Subject,Observer,Reloadable):
       return
 
     oldTable = self.table()
+    colMax=len(self._meta["fieldNames"])-1  # maximum index of a column - added by DV 09/2013
     col = self._meta["fieldMap"][name]
 
     del self._meta["fieldNames"][self._meta["fieldNames"].index(name)]
@@ -223,9 +228,10 @@ class Datacube(Subject,Observer,Reloadable):
     self._table = None
     self._adjustTable()
 
-    mlen = min(len(self._table),len(oldTable))
+    mlen = min(len(self._table),len(oldTable)) 
     self._table[:mlen,:col] = oldTable[:mlen,:col]
-    self._table[:mlen,col:] = oldTable[:mlen,col+1:]
+    if col< colMax:                           # added by DV 09/2013 to solve a bug when deleting the last column
+      self._table[:mlen,col:] = oldTable[:mlen,col+1:]
     self.notify("commit",self._meta["index"])
     
   def removeColumns(self,names):
@@ -412,6 +418,12 @@ class Datacube(Subject,Observer,Reloadable):
   def toDataManager(self):
     dataManager = self.dataManager()
     dataManager.addDatacube(self)
+
+  def plotInDataManager(self,xname="[row number]",yname="[row number]",clear=False):
+    """
+    Plot the datacube in the dataManager
+    """
+    self.dataManager().plot(self,xname,yname,clear)
 
   def autoPlot(self,clear = False):
     self.dataManager().autoPlot(self,clear = clear)
@@ -946,3 +958,24 @@ class Datacube(Subject,Observer,Reloadable):
 
     self._adjustTable()
     self.setFilename(directory+"/"+filename+".par")
+
+  def sendToIgor(self):
+    igorCom=IgorCommunicator()
+    igorCom._app.visible=1
+    root=igorCom._app.DataFolders("root")
+    folderName=self.name()
+    i=0
+    while root.DataFolderExists(folderName):
+      print "'"+folderName +"' already exists"
+      i+=1
+      folderName=self.name()+"-"+str(i)
+    root.add(folderName,0)
+    folder=root.Item(folderName)
+    for column in self._meta["fieldNames"]:
+      igorCom("Make /N=%i/D/O root:'%s':'%s'"%(len(self[column]),folderName,column))
+      wave=folder.Wave(column)
+      for i in range(0,len(self[column])):
+        wave.SetNumericWavePointValue(i,self[column][i])
+    #cmd="Display %s vs %s"%("root:'"+folderName+"':'"+y+"'","root:'"+folderName+"':'"+x+"'")
+    #print cmd     
+    #igorCom(cmd)

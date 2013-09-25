@@ -19,7 +19,8 @@ from pyview.lib.patterns import Subject,Observer,Reloadable
 ##############################
 ## To Do:
 ##    - lock while next or modifying
-##
+##    - add temporary point
+## 
 ##
 ##
 ##
@@ -37,9 +38,11 @@ class SmartLoop(Subject,Observer,Reloadable):
     if self._toDelete:
       self.delete()
       raise StopIteration
+    self._previousValue=self._value
     if self._index==0 or self._restart:
       self._restart=False
       self._value=self._start
+      self._previousValue=self._value
     else:
       if self._step==None:
         raise "No step setted"
@@ -47,7 +50,7 @@ class SmartLoop(Subject,Observer,Reloadable):
         self._value=self._value+self._step
     self._index+=1
     if self._stop!=None:
-      if self._value>self._stop:
+      if (self._value>self._stop and self._previousValue<=self._stop) or (self._value<self._stop and self._previousValue>=self._stop) :
         self.delete()
         raise StopIteration
     
@@ -98,7 +101,8 @@ class SmartLoop(Subject,Observer,Reloadable):
   def play(self):
     self._paused=False
   
-
+  def stopAtNext(self):
+    self._toDelete=True
 
 
 

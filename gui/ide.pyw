@@ -51,7 +51,9 @@ class Log(LineTextWidget):
                                       # call addQueuedText() every timeout 
         self.timer.start()            # start the timer
         self.cnt=0
-        
+        self._timeOfLastMessage=0
+        self._hasUnreadMessage=False
+
     def clearLog(self):
       self.clear()
               
@@ -64,6 +66,16 @@ class Log(LineTextWidget):
       
     def addQueuedText(self):
         self._ide.logTabs.setTabIcon(self._ide.logTabs.currentIndex(),QIcon())
+        if self._tabID==self._ide.logTabs.currentIndex():
+          self._hasUnreadMessage=False
+#         else:
+#          if time.time()-2>self._timeOfLastMessage and self._hasUnreadMessage:
+#            self._ide.logTabs.setTabIcon(self._tabID,self._ide._icons['logo'])
+#        print self._tabID
+#        print str(self._hasUnreadMessage)
+
+
+
         try:
           message=''
           try:
@@ -73,8 +85,11 @@ class Log(LineTextWidget):
             pass
           if message!='':
             self.moveCursor(QTextCursor.End)
+            if len(message)>0:
+              self._hasUnreadMessage=True
             if self._ide.logTabs.currentIndex()!=self._tabID:
               self._ide.logTabs.setTabIcon(self._tabID,self._ide._icons['killThread'])
+              self._timeOfLastMessage=time.time()
             self.textCursor().insertText(message)
             self.moveCursor(QTextCursor.End)
         except:
