@@ -959,11 +959,11 @@ class Datacube(Subject,Observer,Reloadable):
     self._adjustTable()
     self.setFilename(directory+"/"+filename+".par")
 
-  def sendToIgor(self):
+  def sendToIgor_old(self,path=""):
     igorCom=IgorCommunicator()
     igorCom._app.visible=1
     root=igorCom._app.DataFolders("root")
-    folderName=self.name()
+    folderName=self.name()#path+self.name()
     i=0
     while root.DataFolderExists(folderName):
       print "'"+folderName +"' already exists"
@@ -976,6 +976,40 @@ class Datacube(Subject,Observer,Reloadable):
       wave=folder.Wave(column)
       for i in range(0,len(self[column])):
         wave.SetNumericWavePointValue(i,self[column][i])
+    filenameVariable="root:'%s':filename"%(folder.Name)
+    igorCom(["String %s"%filenameVariable])
+    igorCom([filenameVariable+"=\""+self.filename()+"\""])
+
+    for c in self.children():
+      c.sendToIgor(path=path+":"+self.name()+":")
+
+    #cmd="Display %s vs %s"%("root:'"+folderName+"':'"+y+"'","root:'"+folderName+"':'"+x+"'")
+    #print cmd     
+    #igorCom(cmd)
+  def sendToIgor(self,path="root:"):
+    igorCom=IgorCommunicator()
+    igorCom._app.visible=1
+    root=igorCom._app.DataFolder("root")
+    folderName=self.name()#path+self.name()
+    while igorCom.dataFolderExists(path+folderName):
+      print "'"+path+folderName +"' already exists"
+      i+=1
+      folderName=self.name()+"-"+str(i)
+
+    igorCom.createDataFolder(path+"'"+folderName+"'")
+
+    for column in self._meta["fieldNames"]:
+      igorCom("Make /N=%i/D/O %s'%s':'%s'"%(len(self[column]),path,folderName,column))
+      wave=root.Wave("%s'%s':%s"%(path,folderName,column))
+      for i in range(0,len(self[column])):
+        wave.SetNumericWavePointValue(i,self[column][i])
+    filenameVariable="%s'%s':%s"%(path,folderName,"filename")
+    igorCom(["String %s"%filenameVariable])
+    igorCom([filenameVariable+"=\"%s\""%string.replace(self.filename(),"\\",":")])
+
+    for c in self.children():
+      c.sendToIgor(path=path+"'"+self.name()+"':")
+
     #cmd="Display %s vs %s"%("root:'"+folderName+"':'"+y+"'","root:'"+folderName+"':'"+x+"'")
     #print cmd     
     #igorCom(cmd)

@@ -211,8 +211,11 @@ class LoopsPanel(QWidget,ObserverWidget):
     self.looplist.indexOfTopLevelItem(item)
     self.looplist.takeTopLevelItem(self.looplist.indexOfTopLevelItem(item))
     del self._items[self.ref(loop)]
-    if self._selectedLoop==loop:
-      self._selectedLoop=None
+    try:
+      if self._selectedLoop==loop:
+        self._selectedLoop=None
+    except:
+      print "erreur in loopsPanel line 216"
     self.updateLoop()
 
   def playPause(self):

@@ -299,7 +299,9 @@ class IgorCommunicator:
     err_code, err_msg, history, results = result_tuple
     if len(err_msg)>1:
       raise Exception("Active X IgorApp exception: \n  Command : \"" + command +"\"\n  Returns : \""+ err_msg+"\"")
-    return str(results)
+    history=str(history)
+    history=history.split("\r")
+    return str(results),history
     
   def run(self,commands):
     """
@@ -324,3 +326,20 @@ class IgorCommunicator:
     elif type(commands)==type([]):
       return self.run(commands)
     else: raise Exception("IgorApp badly called")
+
+  def dataFolderExists(self,path):
+    if path[-1]!=":":
+        path+=":"
+    history=self.execute("print DataFolderExists(\""+path+"\")")[1]
+    return int(history[1][-1])==1
+
+  def createDataFolder(self,fullPath):
+    path=""
+    if fullPath=="root:": return
+    for subFolderName in fullPath.split(":"):
+      path+=subFolderName
+      if not(self.dataFolderExists(path+":")):
+        self("NewDataFolder "+path)
+      path+=":"
+    return True
+

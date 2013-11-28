@@ -949,7 +949,7 @@ class DataManager(QMainWindow,ObserverWidget):
     """
     Send the selected datacube to igor
     """
-    self._cube.sentToIgor()
+    self._cube.sendToIgor()
 
 
   def __init__(self,parent = None,globals = {}):
