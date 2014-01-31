@@ -214,7 +214,7 @@ class IDE(QMainWindow,ObserverWidget):
     def runCode(self,delimiter=""):     # dv 02/2013
       editor=self.editorWindow.currentEditor()
       code=editor.getCurrentCodeBlock(delimiter)
-      filename = editor.filename() or "[unnamed buffer]"
+      filename = editor.filename().split('\\')[-1] or "[unnamed buffer]"
       shortFileName=filename[filename.rfind("\\")+1:]
       identifier = id(editor)
       if delimiter=="":

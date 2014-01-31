@@ -134,7 +134,8 @@ class Datacube(Subject,Observer,Reloadable):
     """
     Returns the filename of the datacube.
     """
-    return self._meta["filename"]
+    if self._meta["filename"]==None:return ""
+    else: return self._meta["filename"]
       
   def tags(self):
     """
@@ -418,6 +419,12 @@ class Datacube(Subject,Observer,Reloadable):
   def toDataManager(self):
     dataManager = self.dataManager()
     dataManager.addDatacube(self)
+
+  def plot(self,*args, **kwargs):
+    """
+    Alias of plotInDataManager
+    """
+    return self.plotInDataManager(*args,**kwargs)
 
   def plotInDataManager(self,xname="[row number]",yname="[row number]",clear=False):
     """
