@@ -74,8 +74,6 @@ class Log(LineTextWidget):
 #        print self._tabID
 #        print str(self._hasUnreadMessage)
 
-
-
         try:
           message=''
           try:
@@ -94,11 +92,6 @@ class Log(LineTextWidget):
             self.moveCursor(QTextCursor.End)
         except:
           pass
-
-
-
-
-
 
 
 class IDE(QMainWindow,ObserverWidget):
@@ -214,7 +207,11 @@ class IDE(QMainWindow,ObserverWidget):
     def runCode(self,delimiter=""):     # dv 02/2013
       editor=self.editorWindow.currentEditor()
       code=editor.getCurrentCodeBlock(delimiter)
-      filename = editor.filename().split('\\')[-1] or "[unnamed buffer]"
+      try:
+        justName=editor.filename().split('\\')[-1]
+      except:
+        justName=False
+      filename = justName or "[unnamed buffer]"
       shortFileName=filename[filename.rfind("\\")+1:]
       identifier = id(editor)
       if delimiter=="":
@@ -410,12 +407,12 @@ class IDE(QMainWindow,ObserverWidget):
         self.toolsMenu = menuBar.addMenu("Tools")
         self.codeMenu = menuBar.addMenu("Code")
         
-        self.settingsMenu = menuBar.addMenu("Settings")
-        self.runStartupGroup = self.settingsMenu.addAction("Run startup group at startup")
-        self.runStartupGroup.setCheckable(True)
-        self.connect(self.runStartupGroup, SIGNAL('triggered()'), self.toggleRunStartupGroup)
-        if settings.contains('ide.runStartupGroup'):
-          self.runStartupGroup.setChecked(settings.value('ide.runStartupGroup').toBool()) 
+        #self.settingsMenu = menuBar.addMenu("Settings")
+        #self.runStartupGroup = self.settingsMenu.addAction("Run startup group at startup")
+        #self.runStartupGroup.setCheckable(True)
+        #self.connect(self.runStartupGroup, SIGNAL('triggered()'), self.toggleRunStartupGroup)
+        #if settings.contains('ide.runStartupGroup'):
+          #self.runStartupGroup.setChecked(settings.value('ide.runStartupGroup').toBool()) 
         
         
         self.windowMenu = menuBar.addMenu("Window")
@@ -466,7 +463,22 @@ class IDE(QMainWindow,ObserverWidget):
         self.connect(killThread,SIGNAL("triggered()"),self.terminateCodeExecution)
         self.connect(changeWorkingPath, SIGNAL('triggered()'), self.changeWorkingPath)
 
+    def runStartup(self):
+      print "Looking for a startup file or folder at tree level 1 in current project"
+      if self.runStartupGroup.isChecked(): 
+          childrenLevel1= self.projectModel.project().children()
+          found=False
+          for child in childrenLevel1:
+            if child.name().lower() =='startup' :
+              self.runFileOrFolder(child)
+              found=True
+          if not found:
+            print("Startup file or folder not found" )
+
+
+
     def __init__(self,parent=None):
+        print "defining IDE's GUI..."
         QMainWindow.__init__(self,parent)
         ObserverWidget.__init__(self)
        # beginning of GUI definition  +  MultiProcessCodeRunner,CodeEditorWindow, Log, and errorConsole instantiation  
@@ -487,25 +499,17 @@ class IDE(QMainWindow,ObserverWidget):
         self.initializeIcons()
 
         gv = dict()
-
+        print 'starting code runner...' 
         self._codeRunner = MultiProcessCodeRunner(gv = gv,lv = gv)
+        print 'starting editor...' 
         self.editorWindow = CodeEditorWindow(self,newEditorCallback = self.newEditorCallback)   # tab editor window
+        print 'starting error console...'
         self.errorConsole = ErrorConsole(codeEditorWindow = self.editorWindow,codeRunner = self._codeRunner)
 
+        # code about std out and stderr moved down from here to have messages displayed in the start IDE console
+        """
         sys.stdout=self._codeRunner._stdoutProxy
         sys.stderr=self._codeRunner._stderrProxy
-
-
-
-        self.logTabs = QTabWidget()
-        stdoutLog = Log(self._codeRunner.stdoutQueue(),ide=self,tabID=0)
-        self.logTabs.addTab(stdoutLog,"&Log")
-        stderrLog = Log(self._codeRunner.stderrQueue(),ide=self,tabID=1)
-        self.logTabs.addTab(stderrLog,"&Error")
-
-        #sys.stdout=self._codeRunner.stdoutQueue()
-        #sys.stderr=self._codeRunner.stderrQueue()
-
         try:
           sys.sdtout=self._codeRunner.stdoutQueue()
           sys.sdterr=self._codeRunner.stderrQueue()
@@ -513,10 +517,15 @@ class IDE(QMainWindow,ObserverWidget):
           raise
         finally:
           pass
+        """
+        self.logTabs = QTabWidget()
+        stdoutLog = Log(self._codeRunner.stdoutQueue(),ide=self,tabID=0)
+        self.logTabs.addTab(stdoutLog,"&Log")
+        stderrLog = Log(self._codeRunner.stderrQueue(),ide=self,tabID=1)
+        self.logTabs.addTab(stderrLog,"&Error")
 
-               
         verticalSplitter = QSplitter(Qt.Vertical)       # outer verticalsplitter
-        horizontalSplitter = QSplitter(Qt.Horizontal)   # upper horizontal plitter in outer splitter   
+        horizontalSplitter = QSplitter(Qt.Horizontal)   # upper horizontal splitter in outer splitter   
         self.tabs = QTabWidget()                        # empty tabs for future project /thread
         self.tabs.setMaximumWidth(350)
         horizontalSplitter.addWidget(self.tabs)         # add the project/thread tabs
@@ -564,14 +573,29 @@ class IDE(QMainWindow,ObserverWidget):
         self.setWindowIcon(self._icons["logo"])
         
         self._workingDirectory = None
-      # end of GUI definition
+       
+        
+      
+        # end of GUI definition
+        print 'End of GUI definition.'
+        print 'Future messages will be routed to GUI'
+
+        # code just below about stdout and stderr moved down from above to have messages displayed in the start IDE console up to here
+        sys.stdout=self._codeRunner._stdoutProxy
+        sys.stderr=self._codeRunner._stderrProxy
+        try:
+          sys.sdtout=self._codeRunner.stdoutQueue()
+          sys.sdterr=self._codeRunner.stderrQueue()
+        except:
+          raise
+        finally:
+          pass
          
         self.queuedText = ""        
         self.logTabs.show()
 
         #self.errorProxy = LogProxy(self.MyLog.writeStderr)
-
-       
+        print "Loading settings..."
         settings = QSettings()
 
         if settings.contains('ide.workingpath'):
@@ -591,18 +615,10 @@ class IDE(QMainWindow,ObserverWidget):
             lastProjectOpened=True      
           except:
             print("Cannot open last project: %s " % str(settings.value("ide.lastproject").toString()))
-        if lastProjectOpened and self.runStartupGroup.isChecked(): 
-          childrenLevel1= self.projectModel.project().children()
-          found=False
-          for child in childrenLevel1:
-            if child.name().lower() =='startup' :
-              self.runFileOrFolder(child)
-              found=True
-          if not found:
-            print("No \"startup\" file or folder at tree level 1 in current project" )      
 
 
 def startIDE(qApp = None):
+  print 'in startIDE function'
   if qApp == None:
     qApp = QApplication(sys.argv)
 
@@ -614,9 +630,11 @@ def startIDE(qApp = None):
   qApp.setStyleSheet("""QTreeWidget:Item {padding:6;}QTreeView:Item {padding:6;}""")
   qApp.connect(qApp, SIGNAL('lastWindowClosed()'), qApp,
                     SLOT('quit()'))
+  print 'Instantiating IDE...'
   MyIDE = IDE()
   MyIDE.showMaximized()
   qApp.exec_()
+
   
 if __name__ == '__main__':
   startIDE()

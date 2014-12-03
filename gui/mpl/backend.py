@@ -14,6 +14,7 @@ figures = {}
 def draw():
   figure = matplotlib.pyplot.gcf()
   execInGui(lambda figure = figure: drawInGui(figure))
+#  execInGui(lambda matplotlib.pyplot.figure = figure: drawInGui(figure))
 
   
 def draw_if_interactive():
@@ -24,6 +25,7 @@ def draw_if_interactive():
 show = draw
 
 def drawInGui(figure):
+  print "drawInGui"
   figureNumber = figure.number
   if not figureNumber in figures:
     widget = FigureManagerQTAgg(FigureCanvasQTAgg(figure),figureNumber)

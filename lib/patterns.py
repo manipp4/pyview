@@ -95,6 +95,7 @@ class Subject:
         #This is to avoid infinite notification loop, e.g. when the notified class calls a function of the subject that triggers another notify and so on...
         if self.isNotifying:
           #print "WARNING: notify for property %s of %s was called recursively by modifier %s, aborting." % (property,str(self),str(modifier))
+          print 'previous notification not finished'
           return False
         self.isNotifying = True
         deadObservers = []
@@ -105,6 +106,7 @@ class Subject:
             if modifier != observer():
                 try:
                   if hasattr(observer(),'updated'):
+                    #print 'calling updated'                  # The present notifier calls directly the updated method of the observer if it exists
                     observer().updated(self,property,value)
                 except:
                   print "An error occured when notifying observer %s." % str(observer())
@@ -207,7 +209,7 @@ class Observer:
   def __init__(self):
     pass
   
-  def updated(self,subject = None,property = None,value = None):
+  def updated(self,subject = None,property = None,value = None):   
     pass
     
 class Reloadable(object):

@@ -6,10 +6,9 @@ from pyview.gui.patterns import ObserverWidget
 import pyview.helpers.instrumentsmanager 
 
 class FrontPanel(QMainWindow,QWidget,ObserverWidget):
-#class FrontPanel(QMainWindow,QWidget,ObserverWidget):
   
   """
-  A QT instrument frontpanel.
+  A QT instrument frontpanel class depending on classes QMainWindow,QWidget, and ObserverWidget defined in pyview.gui.patterns.
   """
   
   def setInstrument(self,instrument):
@@ -58,13 +57,13 @@ class FrontPanel(QMainWindow,QWidget,ObserverWidget):
     self.qw=QWidget(parent)
     self.setCentralWidget(self.qw)
     menubar=self.menuBar()
-    myMenu=menubar.addMenu("Options")
-    reloadButton=myMenu.addAction("Reload instrument")
-    saveStateButton=myMenu.addAction("Save state")
-    restoreStateButton=myMenu.addAction("Restore state")
-    self.connect(reloadButton,SIGNAL("triggered()"),self.reloadInstrument)
-    self.connect(saveStateButton,SIGNAL("triggered()"),self.saveState)
-    self.connect(restoreStateButton,SIGNAL("triggered()"),self.restoreState)
+    myMenu=menubar.addMenu("&File")
+    reloadCommand=myMenu.addAction("Reload instrument")
+    reloadCommand=myMenu.addAction("Save state")
+    restoreStateCommand=myMenu.addAction("Restore state")
+    self.connect(reloadCommand,SIGNAL("triggered()"),self.reloadInstrument)
+    self.connect(reloadCommand,SIGNAL("triggered()"),self.saveState)
+    self.connect(restoreStateCommand,SIGNAL("triggered()"),self.restoreState)
     ObserverWidget.__init__(self)
     self.setInstrument(instrument)
     self._manager=pyview.helpers.instrumentsmanager.Manager()

@@ -316,9 +316,10 @@ class CodeRunner(Reloadable,Subject):
     else:
       #...otherwise we create a new thread
       class GlobalVariables:
-        
-        def __init__(self,gv):
+
+        def __init__(self,gv,__coderunner__=None):
           self.__dict__ = gv
+          self.__coderunner__=__coderunner__
           
         def __setitem__(self,key,value):
           setattr(self,key,value)
@@ -326,7 +327,7 @@ class CodeRunner(Reloadable,Subject):
         def __getitem__(self,key):
           return getattr(self,key)          
           
-      gvClass = GlobalVariables(gv)
+      gvClass = GlobalVariables(gv,self)
       
       lv["gv"] = gvClass
       lv["__file__"] = filename
@@ -407,7 +408,7 @@ class CodeProcess(Process):
     return self._stderrQueue
     
   def run(self):
-    print "New code process up and running..."
+    print "CodeRunner message: New code process up and running..."
     #sys.stderr = self.StreamProxy(self._stderrQueue)   DV
     sys.stderr = self.StreamProxy(self._stderrQueue)   #why not stderr?
     sys.stdout = self.StreamProxy(self._stdoutQueue)
