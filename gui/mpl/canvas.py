@@ -258,12 +258,15 @@ class MyMplCanvas(FigureCanvas):
     # first recalculate the limit with autoscale on the proper axes if any;
     names=['x','y']
     controls=[self.autoX,self.autoY]
-    tight=False
-    ax.relim()                                                                        # recalculate the xy limits
     if self.threeD:
-      names.append('z')
-      controls.append(self.autoZ)
       tight=True
+    else:
+      tight=False
+    ax.relim()                                                                        # recalculate the xy limits
+    #if self.threeD:
+      #names.append('z')
+      #controls.append(self.autoZ)
+    #  tight=True
     map(lambda name,control: ax.autoscale(enable=control, axis=name, tight=tight),names,controls)
 
     # Then if squared XY space

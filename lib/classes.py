@@ -6,6 +6,12 @@ import traceback
 import socket
 
 try:
+  import win32com.client
+  import pythoncom
+except:
+  print "Cannot import win32com.client or pythoncom"
+
+try:
   import visa
   from visa import VI_ERROR_CONN_LOST,VI_ERROR_INV_OBJECT
   from visa import VisaIOError
