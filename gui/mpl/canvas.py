@@ -100,14 +100,16 @@ class CanvasDialog(QDialog): #The canvas dialog does not redraw by itself
     def enable(optionList,trueOrFalse):
       for option in optionList: option.setEnabled(trueOrFalse) 
 
-    xMin=st.addOption("X Min","QLineEdit",defaultValue=cva.get_xlim()[0],row=1,column=0)
-    xMax=st.addOption("X Max","QLineEdit",defaultValue=cva.get_xlim()[1],row=1,column=1)
+    xMinv,xMaxv = cva.get_xlim()
+    xMin=st.addOption("X Min","QLineEdit",defaultValue=xMinv,row=1,column=0)
+    xMax=st.addOption("X Max","QLineEdit",defaultValue=xMaxv,row=1,column=1)
     autoX=st.addOption("Auto X","QCheckBox",defaultValue=not canvas.autoX,row=2,column=2)
     autoX.stateChanged.connect(lambda : enable([xMin,xMax],not autoX.isChecked()))
     autoX.setChecked(canvas.autoX)
 
-    yMin=st.addOption("Y Min","QLineEdit",defaultValue=cva.get_ylim()[0],row=3,column=0)
-    yMax=st.addOption("Y Max","QLineEdit",defaultValue=cva.get_ylim()[1],row=3,column=1)
+    yMinv,yMaxv = cva.get_ylim()
+    yMin=st.addOption("Y Min","QLineEdit",defaultValue=yMinv,row=3,column=0)
+    yMax=st.addOption("Y Max","QLineEdit",defaultValue=yMaxv,row=3,column=1)
     autoY=st.addOption("Auto Y","QCheckBox",defaultValue=not canvas.autoY,row=4,column=2)
     autoY.stateChanged.connect(lambda : enable([yMin,yMax],not autoY.isChecked()))
     autoY.setChecked(canvas.autoY)
@@ -115,26 +117,25 @@ class CanvasDialog(QDialog): #The canvas dialog does not redraw by itself
     inputBoxes=[xMin,xMax,yMin,yMax]
 
     if  canvas.threeD:      # find a way to retrieve Z extrema of the scale for any of the plot types
-      minZ,maxZ = 0,1       # have something just in case we fail
-      fig=canvas._fig
-      if len(fig.axes)>0:   # if the figure contains axes
-        axe=fig.axes[0]
-        if len(axe.get_images())>0: # and the first axe contains images
-          im4Z=axe.get_images()[0]  # select the first one as the one for defining the z limits
-          minZ,maxZ= im4Z.get_clim()         # and get the info from from clim
+      minZ,maxZ= canvas.my_get_zlim()
       zMin=st.addOption("Z Min","QLineEdit",defaultValue=round(minZ,5),row=5,column=0)
       zMax=st.addOption("Z Max","QLineEdit",defaultValue=round(maxZ,5),row=5,column=1)
       autoZ=st.addOption("Auto Z","QCheckBox",defaultValue=not canvas.autoZ,row=6,column=2)
       autoZ.stateChanged.connect(lambda : enable([zMin,zMax],not autoZ.isChecked()))
       autoZ.setChecked(canvas.autoZ)
       inputBoxes.extend([zMin,zMax])
-
+      if canvas.threeDAxes:
+          elevation=st.addOption("Elevation","QDoubleSpinBox",defaultValue=round(cva.elev,0),row=7,column=0)
+          azimut=st.addOption("Azimut","QDoubleSpinBox",defaultValue=round(cva.azim,0),row=7,column=1)
+          elevation.setMinimum(-90.); elevation.setMaximum(+90.);elevation.setSingleStep(5.)
+          azimut.setMinimum(-180.); azimut.setMaximum(+180.);azimut.setSingleStep(5.);azimut.setWrapping(True)
+          elevation.valueChanged.connect(lambda :self.applyView3D)
+          azimut.valueChanged.connect(lambda :self.applyView3D)
     objValidator = QDoubleValidator(self)
     for extr in inputBoxes:
       extr.setValidator(objValidator)  
     #xMin.setValidator(objValidator);xMax.setValidator(objValidator);yMin.setValidator(objValidator);yMax.setValidator(objValidator)
     #self.connect(xMin,SIGNAL("textEdited(QString)"),lambda : autoX.setChecked(False))
-   
     self.tabs.addTab(self.scaleTab,"Scale")
     self.connect(cancelButton,SIGNAL("clicked()"),self.close)
     self.connect(applyButton,SIGNAL("clicked()"),self.apply)
@@ -143,6 +144,10 @@ class CanvasDialog(QDialog): #The canvas dialog does not redraw by itself
   def ok(self):
     self.apply()
     self.close()
+
+  def applyView3D(self):
+      self._canvas.axes.view_init(sto["Elevation"].value(), sto["Azimut"].value())
+      self._canvas.redraw()
 
   def apply(self):
     # memorize part of the settings in the canvas...
@@ -163,26 +168,20 @@ class CanvasDialog(QDialog): #The canvas dialog does not redraw by itself
             for image in axe.get_images(): 
               image.set_clim(float(sto["Z Min"].text()),float(sto["Z Max"].text()))
         else:
-          zMinList,zMaxList=[],[]
-          for axe in fig.axes[:-1]:           # take the min max of all the clim of all images except the colorbar in the last axe  
+          zMin,zMax=cv.my_get_zlim()
+          for axe in fig.axes:             
             for image in axe.get_images(): 
-              image.autoscale()
-              zMin,zMax=image.get_clim()
-              zMinList.append(zMin)
-              zMaxList.append(zMax)
-          if len(zMinList)*len(zMaxList)>0:
-            zMin,zMax=min(zMinList),max(zMaxList) # take the min max of all the clim of all images except the colorbar in the last axe
-            for axe in fig.axes:             
-              for image in axe.get_images(): 
-                image.set_clim(zMin,zMax)       
-    # Don't modify xy autoscale or call draw here in this dialog. Call a redraw routine in the canvas itself
+              image.set_clim(zMin,zMax)
+      if cv.threeDAxes:
+        cva.view_init(sto["Elevation"].value(), sto["Azimut"].value())
+    # Don't modify xy autoscale or call draw here in this dialog. Call a draw routine in the canvas itself
     cv.redraw()
 
 class MyMplCanvas(FigureCanvas):
   
   """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
   
-  def __init__(self, parent=None, width=5, height=5, dpi=60,name=None, threeD=False):
+  def __init__(self, parent=None, width=5, height=5, dpi=60,name=None, threeD=False,threeDAxes=False):
     
     fig = Figure(figsize=[width, height], dpi=dpi)
     FigureCanvas.__init__(self, fig)
@@ -191,8 +190,8 @@ class MyMplCanvas(FigureCanvas):
     if name: self.name=name
     else: self.name='Figure'
     self.threeD=threeD
+    self.threeDAxes=threeD and threeDAxes
     self.setParent(parent) 
-    
     self._dialog = None
     self._pressed = False
 
@@ -211,7 +210,7 @@ class MyMplCanvas(FigureCanvas):
     #self.setFixedWidth(self._dpi*self._width)
     #self.setFixedHeight(self._dpi*self._height)
 
-    self.createSubplot(threeDAxes=False)  # always start with a normal 2D projection axes object for image plot
+    self.createSubplot(threeDAxes=threeDAxes)  # normally start with a normal 2D projection axes object for image plot
 
     self._isDrawing = False
 
@@ -255,20 +254,25 @@ class MyMplCanvas(FigureCanvas):
   
   def redraw(self): # rescale and redraw according to the scaling parameters in the canvas and in the matplolib figure
     ax=self.axes
-    # first recalculate the limit with autoscale on the proper axes if any;
+    # first recalculate the x and y limits with autoscale on the proper axes if any;
     names=['x','y']
     controls=[self.autoX,self.autoY]
     if self.threeD:
       tight=True
     else:
       tight=False
-    ax.relim()                                                                        # recalculate the xy limits
     #if self.threeD:
       #names.append('z')
       #controls.append(self.autoZ)
     #  tight=True
+    ax.relim()
     map(lambda name,control: ax.autoscale(enable=control, axis=name, tight=tight),names,controls)
-
+    ax.relim()                                                                        # recalculate the xy limits
+    if self.threeD:
+      for im in ax.images:
+        im.set_extent(im.get_extent())
+        if self.autoZ:
+          im.autoscale()
     # Then if squared XY space
     if self.squared:
       xMin,xMax=ax.get_xlim();yMin,yMax=ax.get_ylim()                                 # read the calculated limits
@@ -278,14 +282,45 @@ class MyMplCanvas(FigureCanvas):
       ax.autoscale(enable=False,axis='y')
       ax.set_aspect('equal', adjustable='box', anchor='C')
       if self.centered:
-        None #self.axesLines=[ax.axhline(y=0,color='k'),ax.axvline(x=0,color='k')]          # draw axes if centered
+        None #self.axesLines=[ax.axhline(y=0,color='k'),ax.axvline(x=0,color='k')]    # draw axes if centered
     else:
-      ax.set_aspect('auto', adjustable='box', anchor='C')                         # and disable autoscale
-    if not (self.squared and self.centered):                                       # erase the x=0 and y=0 line if not squared and centered
+      ax.set_aspect('auto', adjustable='box', anchor='C')                             # and disable autoscale
+    if not (self.squared and self.centered):                                          # erase the x=0 and y=0 line if not squared and centered
       for line in self.axesLines:
         #self.axesLines.remove(line)
         None#del line 
+    # Finally, manage the z scale
     self.draw()                                                                       # and redraw in all cases
+
+  def title(self):
+    return self.name
+
+  def autoScale(self):
+    self.autoX=True; self.autoY=True
+    if self.threeD:  self.autoZ=True
+    self.redraw()
+
+  def my_get_zlim(self):             
+    # proprietary get_zlim that should combine get_zlim of 3DAxes (to be done) with clim of images
+    fig=self._fig
+    zMin,zMax=0,1
+    zMinList,zMaxList=[],[]
+    for axe in fig.axes[:-1]:           # take the min max of all the clim of all images except the colorbar in the last axes             
+      for image in axe.get_images(): 
+        if self.autoZ:
+          image.autoscale()
+        zMin,zMax=image.get_clim()
+        zMinList.append(zMin)
+        zMaxList.append(zMax)
+    if len(zMinList)*len(zMaxList)>0:
+      zMin,zMax=min(zMinList),max(zMaxList)
+    return zMin,zMax  
+
+  def zoomTo(self,rect):
+    self.axes.set_xlim(rect.left(),rect.right())
+    self.axes.set_ylim(rect.bottom(),rect.top())
+    self.autoX=False; self.autoY=False 
+    self.redraw()
 
   def toClipboard(self):
     pixmap = QPixmap.grabWidget(self)
@@ -314,32 +349,35 @@ class MyMplCanvas(FigureCanvas):
 
   def scroll(self,event):
     for ax in self._fig.axes:
-      cur_xlim = ax.get_xlim()
-      cur_ylim = ax.get_ylim()
-      cur_xrange = (cur_xlim[1] - cur_xlim[0])*.5
-      cur_yrange = (cur_ylim[1] - cur_ylim[0])*.5
       xdata = event.xdata # get event x location
       ydata = event.ydata # get event y location
-      if event.button == 'up':
-        # deal with zoom in
-        scale_factor = 1/1.3
-      elif event.button == 'down':
-        # deal with zoom out
-        scale_factor = 1.3
-      else:
-        # deal with something that should never happen
-        scale_factor = 1
-        print "unknown even occured in zooming", event.button
-      new_width = (cur_xlim[1] - cur_xlim[0]) * scale_factor
-      new_height = (cur_ylim[1] - cur_ylim[0]) * scale_factor
-      
-      relx = (cur_xlim[1] - xdata)/(cur_xlim[1] - cur_xlim[0])
-      rely = (cur_ylim[1] - ydata)/(cur_ylim[1] - cur_ylim[0])
-      if(self.scrollable[0]): 
-        ax.set_xlim([xdata - new_width * (1-relx), xdata + new_width * (relx)])
-      if(self.scrollable[1]): 
-        ax.set_ylim([ydata - new_height * (1-rely), ydata + new_height * (rely)])
-    self.redraw()
+      if xdata!=None and ydata!=None:
+        cur_xlim = ax.get_xlim()
+        cur_ylim = ax.get_ylim()
+        cur_xrange = (cur_xlim[1] - cur_xlim[0])*.5
+        cur_yrange = (cur_ylim[1] - cur_ylim[0])*.5
+        if event.button == 'up':      scale_factor = 1/1.3    # zoom in
+        elif event.button == 'down':  scale_factor = 1.3      # zoom out
+        else:                                                 # deal with something that should never happen
+          scale_factor = 1
+          print "unknown even occured in zooming", event.button  
+        new_width = (cur_xlim[1] - cur_xlim[0]) * scale_factor
+        new_height = (cur_ylim[1] - cur_ylim[0]) * scale_factor
+        relx = (cur_xlim[1] - xdata)/(cur_xlim[1] - cur_xlim[0])
+        rely = (cur_ylim[1] - ydata)/(cur_ylim[1] - cur_ylim[0])
+        if(self.scrollable[0]):
+          ax.set_xlim([xdata - new_width * (1-relx), xdata + new_width * (relx)])
+        if(self.scrollable[1]): 
+          ax.set_ylim([ydata - new_height * (1-rely), ydata + new_height * (rely)])
+      elif self.threeDAxes:
+        elev,azim=ax.elev,ax.azim              
+        angle=elev
+        if True: angle=azim                       # TO BE MODIFIED: find a way to determine the mouse position and the angle to be modified
+        inc=+5
+        if event.button == 'down': inc=-5
+        angle+=inc
+        ax.view_init(elev,azim) 
+      self.draw()
 
   def setScale(self,w,h):
     """
@@ -349,20 +387,6 @@ class MyMplCanvas(FigureCanvas):
     (wOld,hOld) = self._fig.get_size_inches()
     self._fig.set_size_inches(w, h)
     return wOld, hOld
-
-  def autoScale(self):
-    self.autoX=True; self.autoY=True
-    if self.threeD:  self.autoZ=True
-    self.redraw()
-
-  def zoomTo(self,rect):
-    self.axes.set_xlim(rect.left(),rect.right())
-    self.axes.set_ylim(rect.bottom(),rect.top())
-    self.autoX=False; self.autoY=False 
-    self.redraw()
-
-  def title(self):
-    return self.name
 
   def extraCode(self):
     return self._extraCode

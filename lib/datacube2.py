@@ -7,6 +7,12 @@
 # thus creating a multidimensional data model.                                    *
 #**********************************************************************************
 
+___debugDC2___ = False
+def debugDC2(*args):
+  if ___debugDC2___:
+    for arg in args: print arg,
+    print
+
 #*******************************************************************************
 # Imports and utility classes
 #*******************************************************************************
@@ -26,9 +32,7 @@ import weakref
 import re
 import string
 
-from pyview.lib.classes import *
-
-from pyview.helpers.datamanager import DataManager   # DATAMANAGER
+from pyview.helpers.datamanager2 import DataManager   # DATAMANAGER2
 from pyview.lib.patterns import Subject,Observer,Reloadable
 from pyview.lib.classes import *
 
@@ -53,7 +57,7 @@ class ChildItem:
 #  Datacube class
 #******************************************************************************
     
-class Datacube(Subject,Observer,Reloadable,debugger):
+class Datacube(Subject,Observer,Reloadable):
   """
   Defines  a hirarchical data storage class called datacube.           
   A datacube stores a 2-dimensional table of values of the same type in a numpy array len(self._table[self._index,:])).                                  
@@ -86,7 +90,6 @@ class Datacube(Subject,Observer,Reloadable,debugger):
   # creator 
   ######################################
   def __init__(self,*args,**kwargs):  # creator
-    debugger.__init__(self)
     Subject.__init__(self)
     Observer.__init__(self)
     Reloadable.__init__(self)
@@ -96,7 +99,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     """
     Initializes the data cube.
     """    
-    self.debugPrint('Creating datacube ',name,' = ',self)
+    debugDC2('Creating datacube ',name,' = ',self)
     self._meta = dict()
     if defaults == None:
       defaults = Datacube.defaults
@@ -117,7 +120,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     
     self._children = []
     self._parameters = dict()
-    self._table = zeros(0)
+    self._table = None
     self._parent = None
     
     self._changed = False
@@ -144,9 +147,8 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     """
     self._meta["name"] = str(name)    
     self.setModified()
-    self.debugPrint('datacube.setName with datacube ',self.name(),' notifying "name with name=',name)
+    debugDC2('datacube.setName with datacube ',self.name(),' notifying "name with name=',name)
     self.notify("name",name)  
-    return self
   
   def parent(self):
     """
@@ -184,7 +186,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     """
     self._parameters = params
     self.setModified()
-    self.debugPrint('datacube.setParameters with datacube ',self.name(),' notifying ""parameters"" with parameters=',params)
+    debugDC2('datacube.setParameters with datacube ',self.name(),' notifying ""parameters"" with parameters=',params)
     self.notify("parameters",params)
  
   def setFilename(self,filename):
@@ -193,7 +195,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     """
     self._meta["filename"] = os.path.realpath(filename)
     self.setModified()
-    self.debugPrint('datacube.setFilename with datacube=',self,' notifying ""filename"" with filename=',filename)
+    debugDC2('datacube.setFilename with datacube=',self,' notifying ""filename"" with filename=',filename)
     self.notify("filename",filename)
 
   def relfilename(self):
@@ -226,7 +228,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     """
     self._meta["tags"] = str(tags)
     self.setModified()
-    self.debugPrint('datacube.setTags with datacube ',self.name(),' notifying ""tags"" with tags=',tags)
+    debugDC2('datacube.setTags with datacube ',self.name(),' notifying ""tags"" with tags=',tags)
     self.notify("tags",tags)
     
   def setDescription(self,description):
@@ -235,7 +237,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     """
     self._meta["description"] = str(description)
     self.setModified()
-    self.debugPrint('datacube.setDescription with datacube ',self.name(),' notifying ""description"" with description=',description)
+    debugDC2('datacube.setDescription with datacube ',self.name(),' notifying ""description"" with description=',description)
     self.notify("description",description)
   
   def structure(self,tabs = ""):
@@ -422,7 +424,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     return self._table[:self._meta["length"],:]
 
   def updateFieldMap(self):
-    self.debugPrint('In ',self._meta["name"],'.updateFieldMap()')
+    debugDC2('In ',self._meta["name"],'.updateFieldMap()')
     self._meta["fieldMap"]=dict()
     for i in range(len(self._meta["fieldNames"])):
       self._meta["fieldMap"][self._meta["fieldNames"][i]] = i
@@ -455,31 +457,31 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     Finally send notifications of the field names if notifyFields =True
     Does not change the length of the datacube => Use extendTo to change both the table and the datacube length
     """
-    self.debugPrint('In ',self._meta["name"],'._adjustTable(rowIndex=',rowIndex,',reserve=',reserve,')')
+    debugDC2('In ',self._meta["name"],'._adjustTable(rowIndex=',rowIndex,',reserve=',reserve,')')
     fieldNames,fieldMap,ta=self._meta["fieldNames"],self._meta["fieldMap"],self._table
     nbrCols = len(fieldNames)
-    #if nbrCols==0:                                      # if all columns deleted
-    #  self._table=None                                  # reset table to None and return
-    #else:
-    if rowIndex==None : rowIndex=self._meta["length"]-1
-    reserve=int(max(reserve,0))
-    nbrRows = rowIndex+2+reserve
-    unchangedCols= len(fieldNames)==len(fieldMap) and  all([fieldNames[fieldMap[field]]==field for field in fieldMap ]) # true also for empty fieldNames and fieldMap
-    if unchangedCols and ta!=None :                   # if fields (colum names) have'nt changed
-      if rowIndex >= len (self._table):               #   => adjust only if room is missing 
-        self._resize((nbrRows,nbrCols))               #   => simple resizing without any copy
-    else:                                             # else if column have changed
-      if ta!=None : nbrRows=max(nbrRows,len(ta))
-      newarray = zeros((nbrRows,nbrCols),dtype = self._meta["dataType"]) # create and new array
-      if ta!=None:                                    #   and if the table already exist begin to copy the old data in the new array:
-        for i in range(nbrCols):                      #     copy column by column the old columns
-          if fieldNames[i] in fieldMap:               #     determine if the column i exists in the previous fieldMap
-            j=fieldMap[fieldNames[i]]  
-            newarray[:len(ta),i]=ta[:,j]                     #     copy from the old to new array
-      self._table = newarray                          # update table with new array
-    self.updateFieldMap()                             # update the fieldMap. It is now again in agreement with the fieldName list. 
+    if nbrCols==0:                                      # if all columns deleted
+      self._table=None                                  # reset table to Noe and return
+    else:
+      if rowIndex==None : rowIndex=self._meta["length"]-1
+      reserve=int(max(reserve,0))
+      nbrRows = rowIndex+2+reserve
+      unchangedCols= len(fieldNames)==len(fieldMap) and  all([fieldNames[fieldMap[field]]==field for field in fieldMap ]) # true also for empty fieldNames and fieldMap
+      if unchangedCols and ta!=None :                   # if fields (colum names) have'nt changed
+        if rowIndex >= len (self._table):               #   => adjust only if room is missing 
+          self._resize((nbrRows,nbrCols))               #   => simple resizing without any copy
+      else:                                             # else if column have changed
+        if ta!=None : nbrRows=max(nbrRows,len(ta))
+        newarray = zeros((nbrRows,nbrCols),dtype = self._meta["dataType"]) # create and new array
+        if ta!=None:                                    #   and if the table already exist begin to copy the old data in the new array:
+          for i in range(nbrCols):                      #     copy column by column the old columns
+            if fieldNames[i] in fieldMap:               #     determine if the column i exists in the previous fieldMap
+              j=fieldMap[fieldNames[i]]  
+              newarray[:len(ta),i]=ta[:,j]                     #     copy from the old to new array
+        self._table = newarray                          # update table with new array
+      self.updateFieldMap()                             # update the fieldMap. It is now again in agreement with the fieldName list. 
     if notifyFields:
-      self.debugPrint(self.name(),'._adjustTable  notifying "names" with fieldNames=',self._meta["fieldNames"])
+      debugDC2(self.name(),'._adjustTable  notifying "names" with fieldNames=',self._meta["fieldNames"])
       self.notify('names',self._meta['fieldNames'])
 
   ######################
@@ -540,7 +542,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     """
     Removes several columns from the datacube, given their names or/and indices
     """
-    self.debugPrint('In ',self._meta["name"],'.removeColumns(namesOrIndices=',namesOrIndices,',notify=',notify,')')
+    debugDC2('In ',self._meta["name"],'.removeColumns(namesOrIndices=',namesOrIndices,',notify=',notify,')')
     names=[]
     for nameOrIndex in namesOrIndices:
       if isinstance(nameOrIndex,basestring):
@@ -553,9 +555,9 @@ class Datacube(Subject,Observer,Reloadable,debugger):
         del self._meta["fieldNames"][self._meta["fieldNames"].index(name)]
     self._adjustTable(notifyFields=False) # will also update the fieldMap
     if notify:
-      self.debugPrint('datacube.removeColumn with datacube ',self.name(),' notifying "names" with names=',self._meta["fieldNames"])
+      debugDC2('datacube.removeColumn with datacube ',self.name(),' notifying "names" with names=',self._meta["fieldNames"])
       self.notify("names",self._meta["fieldNames"])
-      self.debugPrint('datacube.removeColumn with datacube ',self.name(),' notifying "commit" with rowIndex=',self._meta["index"])
+      debugDC2('datacube.removeColumn with datacube ',self.name(),' notifying "commit" with rowIndex=',self._meta["index"])
       self.notify("commit",self._meta["index"])
 
   def removeColumn(self,nameOrIndex,notify=True):
@@ -586,13 +588,12 @@ class Datacube(Subject,Observer,Reloadable,debugger):
   
   def _addFields(self,nameIndexDict,adjustTable=True):
     """
-    PRIVATE FUNCTION called by createCol and set
-    Insert new field names (i.e. column names) in self._meta["fieldNames"] and adjust accordingly the fieldMap and the cube's table.
+    PRIVATE FUNCTION called by createCol.
+    Insert a new field name (i.e. column name) in self._meta["fieldNames"] and adjust accordingly the fieldMap and the cube's table.
     """
-    self.debugPrint('In ',self._meta["name"],'_addFields(nameIndexDict=',nameIndexDict,',adjustTable=',adjustTable,')')
+    debugDC2('In ',self._meta["name"],'_addFields(nameIndexDict=',nameIndexDict,',adjustTable=',adjustTable,')')
     newField=False
-    sortedNames=sorted(nameIndexDict, key=nameIndexDict.get)
-    for name in sortedNames:
+    for name in nameIndexDict:
       colIndex=nameIndexDict[name]
       if name==None: name=self.newColumnName()                                  
       existingColIndex=self.columnIndex(name)
@@ -630,7 +631,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     Then sets the passed values (if any) starting from row index = offset.
     Then sends notifications if notify is true.
     """
-    self.debugPrint('In ',self._meta["name"],'createCol(name=',name,',columnIndex=',columnIndex,',offsetRow=',offsetRow,',values=',values,', notify=',notify,')')
+    debugDC2('In ',self._meta["name"],'createCol(name=',name,',columnIndex=',columnIndex,',offsetRow=',offsetRow,',values=',values,', notify=',notify,')')
     newField,columnIndex = self._addFields({name:columnIndex},adjustTable=False)     # Update fieldNames but wait before adjusting the table that we know adapt the length to the passed rows
     if values!=None:                          
       if offsetRow <0 : offsetRow = self._meta["length"]+offsetRow+1 #offsetRow is the index where to start to write
@@ -688,7 +689,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     if self._meta["index"] != None:
       for i in range(0,len(self._table[self._meta["index"],:])):
         self._table[self._meta["index"],i] = 0
-    self.debugPrint('datacube.clearRow with datacube ',self.name(),' notifying "clearRow"')
+    debugDC2('datacube.clearRow with datacube ',self.name(),' notifying "clearRow"')
     self.notify("clearRow")
   
   def removeRow(self,row,notify=False):
@@ -700,7 +701,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
       self._meta["length"] -= 1
     if self._meta["index"] >= row:
       self._meta["index"]-=1
-    self.debugPrint('datacube.removeRow with datacube ',self.name(),' notifying ""removeRow"" with row=',row)
+    debugDC2('datacube.removeRow with datacube ',self.name(),' notifying ""removeRow"" with row=',row)
     if notify:
       self.notify("commit",row)
     
@@ -714,7 +715,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
       if notify: self.notify("commit",row)
 
   def addRow(self,notify=False):
-    self.debugPrint(self._meta["name"],'.addRow(notify=',notify,')')
+    debugDC2(self._meta["name"],'.addRow(notify=',notify,')')
     self.commit(rowIndex=len(self),gotoNextRow=False)
 
   def insertRow(self,rowIndex=None,before=True,notify=False,commit=False,**keys):
@@ -728,7 +729,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     """
     str1=''
     for key in keys:  str1=str1+key+"="+str(keys[key])+','
-    self.debugPrint(self._meta["name"],'.insertRow(rowIndex=',rowIndex,',before=',before,',notify=',notify,',commit=',commit,str1,')')
+    debugDC2(self._meta["name"],'.insertRow(rowIndex=',rowIndex,',before=',before,',notify=',notify,',commit=',commit,str1,')')
     oldIndex=self._meta["index"]
     if rowIndex==None: index=self._meta["index"]
     elif rowIndex<0:index=self._meta["length"]+rowIndex
@@ -754,7 +755,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     """
     str1=''
     for key in keys:  str1=str1+key+"="+str(keys[key])+','
-    self.debugPrint(self._meta["name"],'.insertRows(rowIndex=',rowIndex,',before=',before,',numberOfRows=',numberOfRows,',notify=',notify,',commit=',commit,str1,')')
+    debugDC2(self._meta["name"],'.insertRows(rowIndex=',rowIndex,',before=',before,',numberOfRows=',numberOfRows,',notify=',notify,',commit=',commit,str1,')')
     for i in range(numberOfRows):
       self.insertRow(rowIndex=rowIndex+i,before=before,notify=False,commit=False,**keys)
     if commit: self.commit()              # if commit is forced, current row becomes index+1 (dangerous)
@@ -766,7 +767,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     By default extendLength is false and the length of the datacube is not changed.
     (one usually extends the length with commit).
     """
-    self.debugPrint('In ',self._meta["name"],'extendTo(rowIndex=',rowIndex,',reserve=',reserve,',extendLength=',extendLength,')')
+    debugDC2('In ',self._meta["name"],'extendTo(rowIndex=',rowIndex,',reserve=',reserve,',extendLength=',extendLength,')')
     if rowIndex==None: rowIndex=self._meta["index"]
     self._adjustTable(rowIndex=rowIndex,reserve=reserve,notifyFields=False)
     if extendLength and rowIndex>=self._meta["length"]:
@@ -786,8 +787,8 @@ class Datacube(Subject,Observer,Reloadable,debugger):
       Note: changing the datacube's current row index is dangerous if several callers edit the datacube simultaneously.
     """ 
     str1=''
-    for key in keys:  str1=str1+','+key+"="+str(keys[key])
-    self.debugPrint('In ',self._meta["name"],'.set(rowIndex=',rowIndex,',notify=',notify,',commit=',commit,',columnOrder=',columnOrder,',extendLength=',extendLength,str1,')') 
+    for key in keys:  str1=str1+key+"="+str(keys[key])+','
+    debugDC2('In ',self._meta["name"],'.set(rowIndex=',rowIndex,',notify=',notify,',commit=',commit,',columnOrder=',columnOrder,',extendLength=',extendLength,str1,')') 
     specifiedKeys=[]
     if columnOrder:                                        # process first the keys of columnOrder (even if no specified value)
       for key in columnOrder:
@@ -796,29 +797,29 @@ class Datacube(Subject,Observer,Reloadable,debugger):
       for key in keys:
         if key not in specifiedKeys:
           specifiedKeys.append(key)
-    self.debugPrint('keys in order are ',specifiedKeys)
     nameIndexDict=dict()
     i=0
-    for key in specifiedKeys :
+    for key in specifiedKeys : 
       nameIndexDict[key]=i
-      i+=1
+      i++
     newFields,colIndex=self._addFields(nameIndexDict,adjustTable=False) # then call _addFields to add the new fields (column names) but still wait before adjustTabl
     if rowIndex==None : rowIndex = self._meta["index"]     # defines the row index for the set
     elif rowIndex<0 :  rowIndex = self._meta["length"]+rowIndex
     if rowIndex<0 : rowIndex=0
     self.extendTo(rowIndex=rowIndex,reserve=500,extendLength=extendLength) # now adjustTable to correct the fieldmap and increase the table length
+
     newData=False
     for key in keys:                                        # for each key                           
       newData=True
       columnIndex = self._meta["fieldMap"][key]                 
       self._table[rowIndex,columnIndex] = keys[key]         # add the corresponding value in the table
     if newFields:
-      self.debugPrint('datacube ',self.name(),'notifying "names"=',self._meta["fieldNames"])
+      debugDC2('datacube ',self.name(),'notifying "names"=',self._meta["fieldNames"])
       self.notify("names",self._meta["fieldNames"])  # send only one notification if new names have been added
     if newData:
       if commit: self.commit(rowIndex=rowIndex)                  # and commit if requested
       elif notify:
-        self.debugPrint('datacube ',self.name(),'notifying "commit" with index=',rowIndex)
+        debugDC2('datacube ',self.name(),'notifying "commit" with index=',rowIndex)
         self.notify("commit",rowIndex)
 
   def setAt(self,index,**keys):
@@ -840,7 +841,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     VERY IMPORTANT: When several clients are editing the database at the same time, only one should use commit with the default gotoNextRow=True,
     otherwise they compete for the row index of the next write !!!
     """
-    self.debugPrint('In', self._meta["name"],'.commit (rowIndex=',rowIndex,',gotoNextRow=',gotoNextRow,')')
+    debugDC2('In', self._meta["name"],'.commit (rowIndex=',rowIndex,',gotoNextRow=',gotoNextRow,')')
     if rowIndex==None: rowIndex=self._meta["index"]
     if rowIndex>=self._meta["length"]: self.extendTo(rowIndex=rowIndex,extendLength=True)
     if gotoNextRow : self._meta["index"]=rowIndex+1 # possibly 1st row outside datacube
@@ -855,7 +856,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     sortedValues,sortedIndices = zip(*sorted(indices,reverse = reverse))
     self._table = self._table[sortedIndices,:]
     #To do: Add sorting of children!?
-    self.debugPrint('datacube.sortBy with datacube ',self.name(),' notifying "sortBy" with column=',column)
+    debugDC2('datacube.sortBy with datacube ',self.name(),' notifying "sortBy" with column=',column)
     self.notify("sortBy",column)
 
   def search(self,**kwargs):
@@ -884,9 +885,9 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     return foundRows
   
 
-  #**************************************************************************
-  # Methods for children management    
-  #**************************************************************************
+#**************************************************************************
+# Methods for children management    
+#**************************************************************************
     
   def removeChildren(self,cubes):
     """
@@ -929,7 +930,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
       cube.parent().removeChild(cube)
     cube.setParent(self)
     self._children.append(item)
-    self.debugPrint('datacube.addChild with datacube ',self.name(),' notifying "addChild" with cube=',cube)
+    debugDC2('datacube.addChild with datacube ',self.name(),' notifying "addChild" with cube=',cube)
     self.notify("addChild",cube)
     self.setModified()
 
@@ -1152,7 +1153,6 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     """
     Saves the datacube to a text file
     """
-    self.debugPrint('datacube.savetxt with datacube name=',self.name())
     if path == None and self.filename() != None:
       path = self.filename()
       overwrite = True
@@ -1167,9 +1167,9 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     filename = self._sanitizeFilename(filename)
     #We determine the basename of the file to which we want to save the datacube.
     basename = filename
-    self.debugPrint('directory=',directory,' and baseName=',basename)
     
     cnt = 1
+
     if overwrite == False:
       while os.path.exists(directory+"/"+basename+".txt"):
         basename = filename+"-"+str(cnt)
@@ -1180,8 +1180,10 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     parpath = directory+"/"+basename+".par"
 
     children=[]
-    if float(Datacube.version)>="0.3" or forceFolders:             # new version
-      if saveChildren:       
+    if float(Datacube.version)>="0.3" or forceFolders:
+      print "saving in new version"
+      if saveChildren:
+        
         for i in range(0,len(self._children)):
           item = self._children[i]
           child = item.datacube()
@@ -1195,13 +1197,20 @@ class Datacube(Subject,Observer,Reloadable,debugger):
             pathChild=absPath
           print pathChild
           if not os.path.exists(pathChild):
-            os.mkdir(pathChild)        
-          childPath = child.savetxt(absPath=pathChild,saveChildren = saveChildren,overwrite = True,forceSave = forceSave,forceFolders=forceFolders)  
+            os.mkdir(pathChild)
+                
+                
+          childPath = child.savetxt(absPath=pathChild,saveChildren = saveChildren,overwrite = True,forceSave = forceSave,forceFolders=forceFolders)
+          
           children.append({'attributes':item.attributes(),'path':childPath})
+  
       if os.path.exists(savepath) and os.path.getmtime(savepath) <= self._meta["modificationTime"] and os.path.exists(parpath) and os.path.getmtime(parpath) <= self._meta["modificationTime"]:
         if self._unsaved == False and forceSave == False:
           return basename
-    else:                                                         # old version
+
+    else:
+      #We save the child cubes
+      #print 'saving in old version'
       if saveChildren:
         for i in range(0,len(self._children)):
           item = self._children[i]
@@ -1212,6 +1221,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
             childfilename = basename+("-%d" % (i))
           childPath = child.savetxt(directory+"/"+childfilename,saveChildren = saveChildren,overwrite = True,forceSave = forceSave)
           children.append({'attributes':item.attributes(),'path':childPath})
+  
       if os.path.exists(savepath) and os.path.getmtime(savepath) <= self._meta["modificationTime"] and os.path.exists(parpath) and os.path.getmtime(parpath) <= self._meta["modificationTime"]:
         if self._unsaved == False and forceSave == False:
           return basename
@@ -1454,7 +1464,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
       if name1=='row index':  l=len(self.column(name1))
       elif name2=='row index':  l=len(self.column(name2))
       return [colFunc(name1,l),colFunc(name2,l)]
-    self.debugPrint('plots = ',plots)
+    debugDC2('plots = ',plots)
     # build figure
     if not fig: fig=plt.figure(); leg=False
     else : leg=True
@@ -1499,7 +1509,6 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     Adds the datacube to the dataManager
     """
     self.dataManager().addDatacube(self)
-    return self
 
   def plotInDataManager(self,*args,**kwargs):
     """

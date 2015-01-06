@@ -1,0 +1,94 @@
+#*******************************************************************************
+# DataManager Singleton class which can be used to keep track of datacubes.    *
+# Just call addDatacube() to add a datacube to the DataManager.                *
+# pyview.gui.datamanager.DataManager                                           *
+#   provides a graphical frontend of the DataManager class.                    *
+#*******************************************************************************
+___DEBUG___ = True
+
+#Imports
+
+import sys
+import getopt
+import os.path
+import traceback
+from threading import Thread
+import PyQt4.uic as uic
+
+from pyview.lib.patterns import Singleton,Reloadable,ThreadedDispatcher,Subject,Observer
+
+#This is a class that manages datacubes
+class DataManager(Singleton,Reloadable,ThreadedDispatcher,Subject,Observer):  
+  """
+  The DataManager is a Singleton class which can be used to keep track of datacubes.
+  Just call addDatacube() to add a datacube to the DataManager.
+  pyview.gui.datamanager.DataManager provides a graphical frontend of the DataManager class.
+  """
+  
+  def __init__(self,globals = {}):
+    if hasattr(self,"_initialized"):
+      return
+    self._initialized = True
+    Singleton.__init__(self)
+    Reloadable.__init__(self)
+    Observer.__init__(self)
+    ThreadedDispatcher.__init__(self)
+    Subject.__init__(self)
+    self._datacubes = []
+    self._globals = globals
+
+  def datacubes(self):
+    """
+    Returns the datacubes.
+    """
+    return self._datacubes
+  
+  def addDatacube(self,datacube):
+    """
+    Adds a datacube to the data manager if not already present
+    """
+    if not datacube in self._datacubes:
+      self._datacubes.append(datacube)
+      if ___DEBUG___: print 'DataManager notifying ""addDatacube"" for datacube',datacube
+      self.notify("addDatacube",datacube)
+      datacube.attach(self)
+      return True
+  
+  def removeDatacube(self,datacube):
+    """
+    Removes a datacube from the data manager.
+    """
+    if datacube in self._datacubes:
+      del self._datacubes[self._datacubes.index(datacube)]
+      if ___DEBUG___: print 'DataManager notifying ""removeDatacube"" for datacube',datacube
+      self.notify("removeDatacube",datacube)
+  
+  def clear(self):
+    """
+    Removes all datacubes from the data manager.
+    """
+    self._datacubes = []
+    if ___DEBUG___: print 'DataManager notifying ""cleared"" '
+    self.notify("cleared")
+  
+  #*******************************************************************************  
+  ## Below are functions to notify the dataManager frontpanel to make a plot.
+  ## Note that a datacube has methods to call these functions. 
+    
+  def plot(self,datacube,*args,**kwargs):
+    """
+    1) If datacube not already present, adds it to dataManager;
+    2) Notify the dataManager frontpanel to plot the datacube in a way possibly defined by additional parameters.
+    See the listener response documentation or code to know the enumerated (*args) or named (**kwargs) parameters that can be passed
+    """
+    self.addDatacube(datacube)  # will add it to the dataManager only if not already present
+    if ___DEBUG___ : print 'DataManager notifying ""plot"" for datacube ',datacube
+    self.notify("plot",((datacube,)+args,kwargs)) # then sends a plot notification with value ((datacube,arg1,arg2,...),{kwarg1:val1,kwarg2:val2,...})
+
+    
+  
+        
+  
+  
+    
+  

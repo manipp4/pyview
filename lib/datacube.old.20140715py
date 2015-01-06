@@ -1,0 +1,1222 @@
+#*******************************************************************************
+# This defines  a hirarchical data storage class called datacube.              *
+# A datacube stores a 2-dimensional table of values of the same types:                           *
+#       array len(self._table[self._index,:])).                                *
+# Each datacube is identified by a name and has other properties.              *
+# A datacube can have one or more "child datacubes" for each row of its table, *
+# thus creating a multidimensional data model.                                 *
+#*******************************************************************************
+
+___DEBUG___ = False
+#*******************************************************************************
+# Imports and utility classes
+#*******************************************************************************
+
+from ctypes import *
+from numpy import *
+from scipy import *
+import yaml
+import StringIO
+import os
+import os.path
+import pickle
+import sys
+import copy
+import time
+import weakref
+import re
+import string
+
+from pyview.helpers.datamanager import DataManager
+from pyview.lib.patterns import Subject,Observer,Reloadable
+from pyview.lib.classes import *
+
+class ChildItem:
+  
+  def __init__(self,datacube,attributes):
+    self._datacube = datacube
+    self._attributes = attributes
+
+  def datacube(self):
+    return self._datacube
+    
+  def attributes(self):
+    return self._attributes
+    
+#******************************************************************************
+#  Datacube class
+#******************************************************************************
+    
+class Datacube(Subject,Observer,Reloadable):
+  """
+  Defines  a hirarchical data storage class called datacube.           
+  A datacube stores a 2-dimensional table of values of the same type in a numpy array len(self._table[self._index,:])).                                  
+  Each datacube is identified by a name and has other properties as its length, current index,...              
+  A datacube can have one or more "child datacubes" for each row of its table, thus creating a multidimensional data model.
+  As a member of the Observer and Subject classes, a datacube can send and receive notifications (messages)
+
+  Data are entered in a specific way:
+    - Any element at an existing row index < lenght can be overwritten.
+    - An element can be virtually set at a row index >= length.
+    - An essential role is played by the commit() method :
+        A commit() call simply increment the current row index by one if it is not at the end of the table.
+        If current index is larger or equal to then length, the commit() call extends the length to the current index and set then the current index to the next row.
+      As a result filling the table row by row  by succesive calls of set and commit yields the following situation:
+        Data are added on a virtual row at current index = length, which does not belong yet to the datacube.
+        The commit call makes this line belong to the datacube and preposition the index on the next virtual row. 
+  """
+  # version = "0.2"
+  # version = "0.3"
+  version = "0.4"   # DV April 2014: Calls to Datamanager modified with named parameters instead of unnamed ones
+  
+  defaults = dict()
+  
+  def __init__(self,*args,**kwargs):  # creator
+    Subject.__init__(self)
+    Observer.__init__(self)
+    Reloadable.__init__(self)
+    self.initialize(*args,**kwargs)
+  
+  # initialization called by the creator  
+  def initialize(self,name = "datacube",description = "",filename = None,dtype = float64,defaults = None):    
+    """
+    Initializes the data cube.
+    """    
+    self._meta = dict()
+    if defaults == None:
+      defaults = Datacube.defaults
+    self._meta["defaults"] = defaults
+    self._meta["filename"] = filename
+    self._meta["name"] = name
+    self._meta["fieldNames"] = []
+    self._meta["description"] = description
+    self._meta["fieldMap"] = dict()
+    self._meta["parameters"] = dict()
+    self._meta["index"] = 0
+    self._meta["tags"] = ""
+    self._meta["length"] = 0
+    self._meta["dataType"] = dtype
+    self._meta["modificationTime"] = time.asctime()
+    self._meta["creationTime"] = time.asctime()
+    
+    self._children = []
+    self._parameters = dict()
+    self._table = None
+    self._parent = None
+    
+    self._changed = False
+    self._unsaved = True
+    self._adjustTable()
+  
+  def __getitem__(self,keys):
+    if not hasattr(keys,'__iter__'):
+      keys = [keys]
+    return self.columns(keys)
+    
+  def name(self):
+    """
+    Returns the name of the datacube
+    """
+    return self._meta["name"]
+        
+  def setName(self,name):
+    """
+    Sets the name of the datacube
+    """
+    self._meta["name"] = str(name)    
+    self.setModified()
+    if ___DEBUG___: print 'datacube.setName with datacube=',self,' notifying ""name"" with name=',name
+    self.notify("name",name)  
+  
+  def parent(self):
+    """
+    Returns the parent of the data cube.
+    """
+    if self._parent == None:
+      return None
+    return self._parent
+    
+  def setParent(self,parent):
+    """
+    Sets the parent of the data cube to *parent*.
+    """
+    self._parent = parent
+    
+  def index(self):
+    """
+    Returns the current row index.
+    """
+    return self._meta["index"]
+    
+  def parameters(self):
+    """
+    Returns the parameters of the data cube. The parameter dictionary is saved along with the datacube in a .par file.
+    """
+    return self._parameters
+    
+  def setParameters(self,params):
+    """
+    Sets the parameters of the datacube to *params*
+    Then notify the frontpanel of the new params
+    """
+    self._parameters = params
+    self.setModified()
+    if ___DEBUG___: print 'datacube.setParameters with datacube=',self,' notifying ""parameters"" with parameters=',params
+    self.notify("parameters",params)
+ 
+  def setFilename(self,filename):
+    """
+    Sets the filename of the datacube to *filename*.
+    """
+    self._meta["filename"] = os.path.realpath(filename)
+    self.setModified()
+    if ___DEBUG___: print 'datacube.setFilename with datacube=',self,' notifying ""filename"" with filename=',filename
+    self.notify("filename",filename)
+
+  def relfilename(self):
+    """
+    Returns the relative filename of the datacube.
+    """
+    return self._meta["filename"]
+
+  def filename(self):
+    """
+    Returns the filename of the datacube.
+    """
+    return self._meta["filename"]
+      
+  def tags(self):
+    """
+    Returns the tags of the datacube.
+    """
+    return self._meta["tags"]
+    
+  def description(self):
+    """
+    Returns the description of the datacube
+    """
+    return self._meta["description"]
+    
+  def setTags(self,tags):
+    """
+    Sets the tags of the datacube
+    """
+    self._meta["tags"] = str(tags)
+    self.setModified()
+    if ___DEBUG___: print 'datacube.setTags with datacube=',self,' notifying ""tags"" with tags=',tags
+    self.notify("tags",tags)
+    
+  def setDescription(self,description):
+    """
+    Sets the description of the datacube
+    """
+    self._meta["description"] = str(description)
+    self.setModified()
+    if ___DEBUG___: print 'datacube.setDescription with datacube=',self,' notifying ""description"" with description=',description
+    self.notify("description",description)
+  
+  def structure(self,tabs = ""):
+    """
+    Returns a string describing the structure of the datacube
+    """
+    string = tabs+"cube(%d,%d)" % (self._meta["length"],len(self._meta["fieldNames"]))+"\n"
+    for item in self._children:
+      child = item.datacube()
+      attributes = item.attributes()
+      parts = []
+      for key in attributes:
+        parts.append((" %s = " % str(key))+str(attributes[key]))
+      string+=", ".join(parts)+":\n"
+      string+=child.structure(tabs+"\t")
+    return string
+   
+  def columns(self,names):
+    """
+    Returns a table containing a set of given columns from their names
+    """
+    indices = []
+    for i in range(0,len(names)):
+      indices.append(self._meta["fieldMap"][names[i]])
+    if len(indices) == 1:
+      return self.table()[:,indices[0]]
+    else:
+      return self.table()[:,indices]
+    
+  def columnName(self,index):
+    """
+    Returns a column name from its index
+    """
+    for key in self._meta["fieldMap"].keys():
+      if self._meta["fieldMap"][key] == index:
+        return key
+    return None
+
+  def column(self,name):
+    """
+    Returns a given column of the datacube
+    """
+    if name in self._meta["fieldMap"]:
+      return self._table[:self._meta["length"],self._meta["fieldMap"][name]]
+    return None
+
+  def removeColumn(self,nameOrIndex):
+    """
+    Removes a given column of the datacube from its name or index depending ifnameOrIndex is a string or a number
+    """
+    name=None
+    if isinstance(nameOrIndex,basestring) : name=nameOrIndex  # always proceed with the name for safety
+    elif isinstance(nameOrIndex,int): name=self.columnName(nameOrIndex)
+
+    if not name in self._meta["fieldNames"]:  return
+  
+    oldTable = self.table()
+    colMax=len(self._meta["fieldNames"])-1  # maximum index of a column - added by DV 09/2013
+    col = self._meta["fieldMap"][name]
+
+    del self._meta["fieldNames"][self._meta["fieldNames"].index(name)]
+    del self._meta["fieldMap"][name]
+
+    self._table = None
+    self._adjustTable()
+
+    mlen = min(len(self._table),len(oldTable)) 
+    self._table[:mlen,:col] = oldTable[:mlen,:col]
+    if col< colMax:                           # added by DV 09/2013 to solve a bug when deleting the last column
+      self._table[:mlen,col:] = oldTable[:mlen,col+1:]
+    if ___DEBUG___: print 'datacube.removeColumn with datacube=',self,' notifying ""commit"" with index=',self._meta["index"]
+    self.notify("commit",self._meta["index"])
+    if ___DEBUG___: print 'datacube.setDescription with datacube=',self,' notifying ""removeColumn"" with name=',name
+    self.notify("removeColumn",name)
+    
+  def removeColumns(self,namesOrIndices):
+    """
+    Removes several columns from the datacube, given their names
+    """
+    for nameOrIndex in namesOrIndices:
+      self.removeColumn(nameOrIndex)
+
+  def _adjustTable(self):
+    """
+    Resizes the table, if necessary
+    """
+    if self._table == None: 
+      self._table=zeros((self._meta["length"]+1,len(self._meta["fieldNames"])),dtype = self._meta["dataType"])
+    elif shape(self._table)[1] < len(self._meta["fieldNames"]):
+      newarray = zeros((len(self._table),len(self._meta["fieldNames"])),dtype = self._meta["dataType"])
+      newarray[:,:len(self._table[0,:])]=self._table
+      self._table = newarray
+      if ___DEBUG___: print 'datacube._adjustTable with datacube=',self,' notifying ""names"" with fieldNames=',self._meta["fieldNames"]
+      self.notify("names",self._meta["fieldNames"])
+    for i in range(0,len(self._meta["fieldNames"])):
+      self._meta["fieldMap"][self._meta["fieldNames"][i]] = i
+                
+  def clear(self):
+    """
+    Resets the datacube to its initial state
+    """
+    self.initialize()
+    
+  def table(self):
+    """
+    Returns the data table
+    """
+    return self._table[:self._meta["length"],:]
+    
+  def search(self,**kwargs):
+    """
+    Searches for a given combination of values in the datacube.
+    Example: datacube.search(a = 4, b = -3,c = 2,start = 0) will return the index of all rows
+    where a == 4, b == -3, c == 2,starting at index 0.
+    If no row matches the given criteria, search will return [].
+    """
+    keys = kwargs.keys()
+    cols = dict()
+    foundRows = []
+    dtype = self.table().dtype
+    for key in keys:                      # return [] if one of the requested column does not exist
+      cols[key] = self.column(key)
+      if cols[key] == None:
+        return []
+    for i in range(0,len(cols[keys[0]])):
+      found = True
+      for key in keys:
+        if not allclose(array(kwargs[key],dtype=dtype), cols[key][i]):
+          found = False
+          break
+      if found:
+        foundRows.append(i)
+    return foundRows
+    
+  # row manipulation
+         
+  def setIndex(self,index):
+    """
+    Synonym for goTo
+    """
+    self.goTo(self,index)
+    
+  def goTo(self,row = 0):
+    """
+    Sets the current row to a given index
+    """
+    if row < self._meta["length"]:
+      self._meta["index"] = row
+  
+  def rowAt(self,index):
+    """
+    Returns a row at a given index
+    """
+    if index != None and index < len(self):
+      return self._table[index,:]
+        
+  def row(self):
+    """
+    Returns the current row
+    """
+    return self.rowAt(self._meta["index"])
+          
+  def clearRow(self):
+    """
+    Sets all values in the current row to 0
+    """
+    if self._meta["index"] != None:
+      for i in range(0,len(self._table[self._meta["index"],:])):
+        self._table[self._meta["index"],i] = 0
+    if ___DEBUG___: print 'datacube.clearRow with datacube=',self,' notifying ""clearRow""'
+    self.notify("clearRow")
+  
+  def setColumn(self,*args,**kwargs):
+    """
+    Alias for createColumn..
+    """
+    return self.createColumn(*args,**kwargs)
+  
+  def createColumn(self,name,values,offset = 0):
+    """
+    Creates a new column
+    """
+    index = self.index()
+    self.goTo(offset)
+    for value in values:
+      self.set(**{name:value})
+      self.commit()
+    self.goTo(index)
+
+  def addRow(self):  # used by datacubeview 
+    """
+    Add a row at the end of the datacube and go to that row.
+    """
+    self._meta["index"]=self._meta["length"]   # set the position at the first row outside datacube 
+    self._resize((self._meta["length"]+1,len(self._meta["fieldNames"])))
+    self.commit()
+  
+  def removeRow(self,row):
+    """
+    Removes a given row from the datacube.
+    """
+    if row < self._meta["length"]:
+      self._table[row:-1,:] = self._table[row+1:,:]
+      self._meta["length"] -= 1
+    if self._meta["index"] >= row:
+      self._meta["index"]-=1
+    if ___DEBUG___: print 'datacube.removeRow with datacube=',self,' notifying ""removeRow"" with row=',row
+    self.notify("removeRow",row)
+    
+  def removeRows(self,rows):
+    """
+    Removes a list of rows from the datacube.
+    """
+    sortedRows = reversed(sorted(rows)) # important to reverse for sequential removing
+    for row in sortedRows:
+      self.removeRow(row)
+
+  def insertAt(self,index,before=True,**keys):
+    """
+    Insert a row and set the  variables before or after a given row index, keeping the current index pointing to the same values.
+    """
+    if index>=self._meta["length"]: setAt(self,index,**keys)
+    else:
+        self._resize((self._meta["length"]+1,len(self._meta["fieldNames"])))
+        if not before: index+=1
+        self._table[index+1:-1,:] = self._table[index:,:]
+        setAt(index,**keys)
+
+  def setAt(self,index,**keys):
+    """
+    Sets a set of variables at a given index, keeping the current index unchanged at the end
+    """
+    oldIndex = self._meta["index"]
+    self._meta["index"] = index
+    self.set(**keys)
+    self.commit()
+    self._meta["index"] = oldIndex
+
+  def set(self,**keys):
+    """
+    Sets a set of variables in the current row, after having created new columns if needed.
+    Does not go automatically to the next line. Call commit() for this purpose or use setAt instead.
+    """
+    currentShape = shape(self._table)
+    if self._meta["index"] >= currentShape[0]:
+      self._resize((self._meta["index"]+10001,len(self._meta["fieldNames"])))
+    for key in keys:
+      i = self._meta["fieldMap"].get(key)
+      if i == None:
+        self._meta["fieldNames"].append(key)
+        self._adjustTable()
+        i = self._meta["fieldMap"].get(key)
+      self._table[self._meta["index"],i] = keys[key]
+      
+  # added by DV to circumvent the random order of columns created by set
+  def setInOrder(self,**keys):
+    """
+    Sets a set of variables in the current row, after having created new columns if needed.
+    Allows to force the order of column creation using a special keyword 'order' with value equal to a list of column names.
+    All forced columns are inserted first in the imposed order while other ones are inserted in random order by python (usually alphabetic order).
+    Example: Starting from an empty datacube setInOrder(d=0,c=1,b=2,a=3,order=['b','a']) creates the columns 'b','a','c','d'.
+    Does not go automatically to the next line. Call commit() for this purpose.
+    """ 
+    currentShape = shape(self._table)
+    if self._meta["index"] >= currentShape[0]:
+      self._resize((self._meta["index"]+10001,len(self._meta["fieldNames"])))
+    newKeys=[]
+    values=[]
+    if 'order' in keys:
+      order=keys['order']
+      del keys['order']
+      for key in order:
+        if key in keys:
+          newKeys.append(key)
+          values.append(keys[key])
+    for key in keys:
+      if key not in newKeys:
+        newKeys.append(key)
+        values.append(keys[key])
+    for j in range(len(newKeys)):
+      key=newKeys[j]
+      value=values[j]
+      i = self._meta["fieldMap"].get(key)
+      if i == None:
+        self._meta["fieldNames"].append(key)
+        self._adjustTable()
+        i = self._meta["fieldMap"].get(key)
+      self._table[self._meta["index"],i] = value
+  
+  def sortBy(self,column,reverse = False):
+    """
+    Sorts the datacube by a given variable
+    """
+    col = list(self.column(column))
+    indices = zip(col,range(0,len(col)))
+    sortedValues,sortedIndices = zip(*sorted(indices,reverse = reverse))
+    self._table = self._table[sortedIndices,:]
+    #To do: Add sorting of children!?
+    if ___DEBUG___: print 'datacube.sortBy with datacube=',self,' notifying ""sortBy"" with column=',column
+    self.notify("sortBy",column)
+  
+  def setModified(self):
+    """
+    Marks the datacube as unsaved
+    """
+    self._meta["modificationTime"] = time.asctime()
+    self._unsaved = True
+    
+  def setChanged(self,changed = False):
+    """
+    Marks the datacube as changed
+    """
+    self._changed = changed
+    
+  def changed(self):
+    """
+    Returns True if the datacube has been changed but not saved
+    """
+    return self._changed
+            
+  def names(self,includeChildren = False):
+    """
+    Returns all column names of the datacube (and optionally also of all children)
+    """
+    names = self._meta["fieldNames"]
+    if includeChildren == False:
+      return names
+    for cube in map(lambda x:x.datacube(),self._children):
+      subnames = cube.names()
+      for subname in subnames:
+        if not subname in names:
+         names.append(subname)
+    return names
+  
+  def _resize(self,size):
+    """
+    Resizes the datacube table only
+    """
+    self._table.resize(size,refcheck = False)
+
+  def commit(self):
+    """
+    Go to the next row of the datacube after increasing its length if necessary. 
+    """
+    if self._meta["length"]<=self._meta["index"]: self._meta["length"] = self._meta["index"]+1
+    self.setModified()
+    if ___DEBUG___: print 'datacube.commit with datacube=',self,' notifying ""commit"" with index=',self._meta["index"]
+    self.notify("commit",self._meta["index"])
+    self._meta["index"]+=1
+    
+  def __len__(self): # magic method
+    """
+    Returns the length (i.e. the number of rows) of the datacube
+    """
+    return self._meta["length"]  
+
+  #**************************************************************************
+  # Methods for children management    
+  #**************************************************************************
+    
+  def removeChildren(self,cubes):
+    """
+    Removes a list children from the datacube.
+    """
+    for cube in cubes:
+      self.removeChild(cube)
+  
+  def removeChild(self,child,eraseChild = False):
+    """
+    Removes a given child cube from the datacube
+    """
+    for item in self._children:
+      if item.datacube() == child:
+        item.datacube().setParent(None)
+        del self._children[self._children.index(item)]
+        self.notify("removeChild",item.datacube())
+        return
+          
+  def addChild(self,cube,**kwargs):
+    """
+    Adds a child to the datacube
+    """
+    if cube == self:
+      raise Exception("Cannot add myself as child!")
+    if cube in self.children():
+      raise Exception("Datacube is already a child!")
+    attributes = kwargs
+    if not "row" in attributes:
+      attributes["row"] = self.index()
+    item = ChildItem(cube,attributes)
+    if cube.parent() != None:
+      cube.parent().removeChild(cube)
+    cube.setParent(self)
+    self._children.append(item)
+    if ___DEBUG___: print 'datacube.addChild with datacube=',self,' notifying ""addChild"" with cube=',cube
+    self.notify("addChild",cube)
+    self.setModified()
+
+  def attributesOfChildren(self):
+    class Attributes(list):
+      def addToList(self,obj): 
+        if not(obj in self): self.append(obj)
+    attributes=Attributes()
+    for child in self.children():
+      for k in self.attributesOfChild(child).keys():
+        attributes.addToList(k)
+    return attributes
+
+  def attributesOfChild(self,child):
+    if child in map(lambda x:x.datacube(),self._children):
+      i = map(lambda x:x.datacube(),self._children).index(child)
+      return self._children[i].attributes()
+    raise AttributeError("Child not found!")
+    
+  def setChildAttributes(self,child,**kwargs):
+    attributes = self.attributesOfChild(child)
+    for key in kwargs:
+      attributes[key] = kwargs[key]
+
+  def children(self,**kwargs):
+    """
+    Returns the children dictionary of the datacube
+    """
+    if kwargs == {}:
+      return map(lambda x:x.datacube(),self._children)
+    else:
+      children = []
+      for item in self._children:
+        deviate = False
+        for key in kwargs:
+          if (not key in item.attributes()) or item.attributes()[key] != kwargs[key]:
+            deviate = True
+            continue
+        if not deviate:
+          children.append(item.datacube())
+      return children             
+  
+  #*******************************************************************************
+  # Methods to load from and save to files
+  #*******************************************************************************
+
+  def loadTable(self,filename,delimiter = "\t",guessStructure = False):
+    """
+    Loads the table of the datacube from a text file
+    """
+    file = open(filename,"r")
+    contents = file.read()
+    file.close()
+    lines = contents.split("\n")
+    if guessStructure:
+      self._meta["fieldNames"] = lines[0].split(delimiter)
+      self._meta["length"] = len(lines)-1
+      if lines[1].find("j") == -1:
+        self._meta["dataType"] = float64
+      else:
+        self._meta["dataType"] = complex128
+    self._table = zeros((len(lines[1:]),len(self._meta["fieldNames"])),dtype = self._meta["dataType"])
+    self._meta["length"] = 0
+    i = 0
+    for line in lines[1:]:
+      entries = line.split(delimiter)
+      j = 0
+      if line == "":
+        continue
+      for entry in entries:
+        if entry != "":
+          if self._meta["dataType"] == complex128:
+            value = complex(entry)
+          elif self._meta["dataType"] == bool:
+            if entry == "False":
+              value = 0
+            else:
+              value = 1
+          else:
+            value = float(entry)
+          if j < len(self._meta["fieldNames"]) and i < self._table.shape[0]:
+            self._table[i,j] = value
+          j+=1
+      self._meta["length"]+=1
+      i+=1
+          
+  def loadFromHdf5(self,path,verbose = False):
+    """
+    Loads the datacube from a HDF5 file.
+    """
+    import h5py
+    dataFile = h5py.File(path,"r")
+    self.loadFromHdf5Object(dataFile,verbose = verbose)
+    dataFile.close()
+    
+  
+  def saveToHdf5(self,path = None,saveChildren = True,overwrite = False,forceSave = False,verbose = False):
+    """
+    Saves the datacube to a HDF5 file 
+    """
+    import h5py
+    if path == None and self.filename() != None:
+      path = self.filename()
+      overwrite = True
+
+    elif path == None and self.name() != None:
+      path = self.name()+".hdf"
+      
+    if path == None:
+      raise Exception("You must supply a filename!")
+    
+    if verbose:
+      print "Creating HDF5 file at %s" % path
+      
+    dataFile = h5py.File(path,"w")
+    
+    self.saveToHdf5Object(dataFile,saveChildren,overwrite,forceSave,verbose = verbose)
+    self._meta["modificationTime"] = os.path.getmtime(path)
+    self.setFilename(path)
+
+    dataFile.flush()
+    dataFile.close()
+  
+    
+  def loadFromHdf5Object(self,dataFile,verbose = False):
+    """
+    Loads the datacube from a HDF5 group
+    """
+    version = dataFile.attrs["version"]
+    
+    if version in ["0.1","0.2"]:
+      self._meta = yaml.load(dataFile.attrs["meta"])
+      self._parameters = yaml.load(dataFile.attrs["parameters"])
+    
+    if len(self)>0:   
+      ds = dataFile["table"]
+      self._table = empty(shape=ds.shape, dtype=ds.dtype)
+      self._table[:] = ds[:]
+    
+    self._adjustTable()
+    self._children = []
+    
+    for key in sorted(map(lambda x:int(x),dataFile['children'].keys())):
+      child = dataFile['children'][str(key)]
+      cube = Datacube()
+      cube.loadFromHdf5Object(child)
+      attributes = yaml.load(child.attrs["attributes"])
+      self.addChild(cube,**attributes)
+      
+    return True
+
+  def saveToHdf5Object(self,dataFile,saveChildren = True,overwrite = False,forceSave = False,verbose = False):
+    """
+    Saves the datacube to a HDF5 group
+    """
+    dataFile.attrs["version"] = Datacube.version
+    dataFile.attrs["meta"] = yaml.dump(self._meta)
+    dataFile.attrs["parameters"] = yaml.dump(self._parameters)
+    
+    if len(self)>0:
+      dataFile.create_dataset('table',data = self.table())   
+
+    childrenFile = dataFile.create_group("children")
+
+    #We save the child cubes
+    if saveChildren:
+      cnt = 0
+      for item in self._children:
+        childFile = childrenFile.create_group(str(cnt))
+        childFile.attrs["attributes"] = yaml.dump(item.attributes())
+        child = item.datacube()
+        child.saveToHdf5Object(childFile,verbose = verbose)
+        cnt+=1
+        
+    self._unsaved = False
+    return True
+
+  def saveTable(self,filename,delimiter = "\t",header = None):
+    """
+    Saves the data table to a given file
+    """
+    file = open(filename,"w")
+    headers = ""
+    for name in self.names():
+      headers+=name+"\t"
+    headers = string.rstrip(headers)+"\n"
+    if header != None:
+      file.write(header)
+    file.write(headers)
+    s = self._table.shape
+    for i in range(0,min(s[0],self._meta["length"])):
+      line = ""
+      for j in range(0,len(self._meta["fieldNames"])):
+        numberstr = str(self._table[i,j])
+        if numberstr[0] == '(':
+          numberstr = numberstr[1:-1]
+        line+=numberstr
+        if j != len(self._meta["fieldNames"])-1:
+          line+=delimiter
+      line+="\n"
+      file.write(line)
+    file.close()
+  
+  def savetxt(self,path = None, absPath=None, saveChildren = True,overwrite = False,forceSave = False,allInOneFile = False, forceFolders=False):
+    """
+    Saves the datacube to a text file
+    """
+    if path == None and self.filename() != None:
+      path = self.filename()
+      overwrite = True
+    elif path == None and self.name() != None:
+      path = self.name()
+    if path == None:
+      raise Exception("You must supply a filename!")
+    
+    path = re.sub(r"\.[\w]{3}$","",path)
+    directory = os.path.abspath(os.path.dirname(path))
+    filename = os.path.split(path)[1]
+    filename = self._sanitizeFilename(filename)
+    #We determine the basename of the file to which we want to save the datacube.
+    basename = filename
+    
+    cnt = 1
+
+    if overwrite == False:
+      while os.path.exists(directory+"/"+basename+".txt"):
+        basename = filename+"-"+str(cnt)
+        cnt+=1
+
+    savename = basename+".txt"
+    savepath = directory+"/"+savename
+    parpath = directory+"/"+basename+".par"
+
+    children=[]
+    if float(Datacube.version)>="0.3" or forceFolders:
+      print "saving in new version"
+      if saveChildren:
+        
+        for i in range(0,len(self._children)):
+          item = self._children[i]
+          child = item.datacube()
+          if child.name() != None:
+            childfilename = basename+"-"+child.name()+("-%d" % (i))
+          else:
+            childfilename = basename+("-%d" % (i))
+          if absPath==None:
+            pathChild=os.path.abspath(os.path.dirname(savepath))+"/"+path+"/"+self.name()
+          else:
+            pathChild=absPath
+          print pathChild
+          if not os.path.exists(pathChild):
+            os.mkdir(pathChild)
+                
+                
+          childPath = child.savetxt(absPath=pathChild,saveChildren = saveChildren,overwrite = True,forceSave = forceSave,forceFolders=forceFolders)
+          
+          children.append({'attributes':item.attributes(),'path':childPath})
+  
+      if os.path.exists(savepath) and os.path.getmtime(savepath) <= self._meta["modificationTime"] and os.path.exists(parpath) and os.path.getmtime(parpath) <= self._meta["modificationTime"]:
+        if self._unsaved == False and forceSave == False:
+          return basename
+
+    else:
+      #We save the child cubes
+      #print 'saving in old version'
+      if saveChildren:
+        for i in range(0,len(self._children)):
+          item = self._children[i]
+          child = item.datacube()
+          if child.name() != None:
+            childfilename = basename+"-"+child.name()+("-%d" % (i))
+          else:
+            childfilename = basename+("-%d" % (i))
+          childPath = child.savetxt(directory+"/"+childfilename,saveChildren = saveChildren,overwrite = True,forceSave = forceSave)
+          children.append({'attributes':item.attributes(),'path':childPath})
+  
+      if os.path.exists(savepath) and os.path.getmtime(savepath) <= self._meta["modificationTime"] and os.path.exists(parpath) and os.path.getmtime(parpath) <= self._meta["modificationTime"]:
+        if self._unsaved == False and forceSave == False:
+          return basename
+
+    #We save the datacube itself
+
+    self.setFilename(parpath)
+    
+    paramsDict = dict()
+    paramsDict['version'] = Datacube.version
+    paramsDict['meta'] = copy.copy(self._meta)
+    paramsDict['parameters'] = self.parameters()
+    paramsDict['children'] = children
+    paramsDict['tablefilename'] = savename
+
+    paramstxt = yaml.dump(paramsDict)
+
+    if not allInOneFile:
+      params = open(parpath,"w")
+      params.write(paramstxt)
+      params.close()
+      self.saveTable(savepath)
+    else:
+      lines = paramstxt.split("\n")
+      paramstxt = "#"+"\n#".join(lines)
+      self.saveTable(savepath,header = paramstxt)
+
+    self._unsaved = False
+    self._meta["modificationTime"] = os.path.getmtime(savepath)
+
+    return basename
+  
+  def erase(self):
+    """
+    Erase a datacube from HardDrive
+    """
+    filename=self.filename()
+    
+    for i in range(len(self._children)-1,-1,-1):
+      self._children[i].datacube().erase()
+    try:
+      os.remove(filename)
+      os.remove(filename[:-3]+'txt')
+    except:
+      raise
+  
+  def childrenAt(self,row):
+    """
+    Returns all child cubes at row [row]
+    """
+    return self.children(row = row)
+      
+  def _sanitizeFilename(self,filename):
+    """
+    Used to clean up the filename and remove all unwanted characters
+    """
+    filename = re.sub(r'\.','p',filename)    
+    filename = re.sub(r'[^\=\_\-\+\w\d\[\]\(\)\s\\\/]','-',filename)
+    return filename
+    
+  def save(self,filename,format = 'pickle'):
+    """
+    Dumps the datacube to a pickled string
+    """
+    self._resize((self._meta["length"],len(self._meta["fieldNames"])))
+    f = open(filename,"wb")
+    return pickle.dump(self,f)
+
+  def load(self,filename):
+    """
+    Loads the datacube from a pickled file
+    """
+    f = open(filename,"rb")
+    loaded = pickle.load(f)
+    self.__dict__ = loaded.__dict__
+
+  def loadstr(self,string):
+    """
+    loadstr(string)
+    Load the datacube from a pickled string
+    """
+    loaded = pickle.loads(string)
+    self.__dict__ = loaded.__dict__
+
+  def loadtxt(self,path,format = 'yaml',loadChildren = True):
+    """
+    Loads the datacube from a text file
+    """
+  
+    path = re.sub(r"\.[\w]{3}$","",path)
+    params = open(path+".par","r")
+    filename = os.path.split(path)[1]
+    directory = os.path.abspath(os.path.dirname(path))
+    data = yaml.load(params.read())          
+    params.close()
+    
+    if "version" in data:
+      version = data["version"]
+    else:
+      version = "undefined"
+    
+    guessStructure = False
+    
+    if version in ["0.1","0.2","0.3","0.4"]:
+      self._meta = data["meta"]
+      self._parameters = data["parameters"]
+    elif version == "undefined":
+      print "Undefined version, trying my best to load the datacube..."
+      mapping = {"len":"length","index":"index","names":"fieldNames","name":"name","description":"description","tags":"tags","dtype":"dataType"}
+      for key in mapping.keys():
+        if key in data:
+          self._meta[mapping[key]] = data[key]
+      
+    if "parameters" in data:
+      self._parameters = data["parameters"]
+    
+    self._children = []
+
+    if loadChildren:
+      if version == "undefined" or version == "0.1":
+        for key in data["children"]:
+          try:
+            for path in data["children"][key]:
+              if not os.path.isabs(path):
+                path = directory + "/" + path
+              datacube = Datacube()
+              datacube.loadtxt(path)
+              attributes = {"row" : key}
+              item = ChildItem(datacube,attributes)
+            self._children.append(item)
+          except:
+            self.removeChild(datacube)
+            print "cannot load 1 datacube"
+      elif float(Datacube.version)>=0.2:                   
+        for child in data['children']:
+          try:
+            datacube = Datacube()
+            path = child["path"]
+            if not os.path.isabs(path):
+              path = directory + "/" + path
+            datacube.loadtxt(path)
+            self.addChild(datacube,**child["attributes"])
+          except:
+            self.removeChild(datacube)
+            print "cannot load 1 datacube"
+
+    tableFilename = directory+"/"+data['tablefilename']
+
+    self.loadTable(tableFilename,guessStructure = guessStructure)
+    self._meta["modificationTime"] = os.path.getmtime(directory+"/"+data['tablefilename'])
+
+    self._adjustTable()
+    self.setFilename(directory+"/"+filename+".par")
+
+  #*******************************************************************************
+  # Methods to plot in a Matplotlib figure
+  #*******************************************************************************
+
+  def plot(self,fig=None,x=None,y=None,ls='-',marker='o',color='b',**kwargs):
+  # Implement a plot in a matplotlib figure
+    """
+    Plot a numeric datacube in a matplotlib figure.
+    In case of complex numbers: Re[y] and Im[y] are plotted as a function of Re[x].
+    - fig is an existing matplotlib figure or None (new figure);
+    - x: the x column name, a list of x column names, None, or an empty list.
+        If None, x=first column if more than two columns in the datacube or x=row index if only one column.
+        If empty list [], x is the row index for all y columns
+    - y: the y column name, a list of y column names, or None.
+        If None, y=second column if more than two columns in the datacube or y=first column if only one column.
+    - ls:the linestyle expressed as specified in Matplotlib.
+    - marker: the marker style expressed as specified in Matplotlib
+    - color: the color of the first curve (automatically incremented if several curves in a single call)
+    - kwargs: unused named arguments
+    """
+    try:
+      from matplotlib import pyplot as plt
+    except:
+      print 'Error Cannot load pyplot from Matplolib module'
+      return
+    numberTypes=(int_,intc,intp,int8,int16,int32,int64,uint8,uint16,uint32,uint64,float_,float16,float32,float64)
+    complexTypes=(complex_,complex64,complex128)
+    colors=['b','g','r','c','m','k']
+    if not color in colors: colors.insert(0,color)
+
+    length=self._meta["length"]
+    names=self._meta["fieldNames"]
+    type=self._meta["dataType"]
+    
+    # give up if no possible plot
+    giveup= type not in numberTypes and type not in complexTypes or length==0
+    if giveup:
+      print "Warning from Datacube.plot(): datacube is empty or not numeric"
+      return
+    # filter the x and y names
+    def filter(t):
+      if t and isinstance(t, basestring):
+        if t in names: t=[t]                  # replace a string that is not an existing name by None
+        else:
+          t=None
+          print "Warning from Datacube.plot():',t,' is not a valid column name"
+      elif t and isinstance(t, list):         # remove all non existing names from a list
+        for ti in t: 
+          if ti not in names: t.remove(ti)
+        if len(t)==0:
+          t=None                              # None if empty list
+          print "Warning from Datacube.plot():',t,' is not a list with valid column names" 
+      else:
+        t=None                                # None in all other cases and warning message 
+        print "Warning from Datacube.plot(): x or y is neither None, nor a string nor a list" 
+      return t
+    x=filter(x); y=filter(y)
+    # replace None by a single default column
+    if y==None:
+      if x==None:                             # None,None more than 2 columns => x y first and second columns
+        if length>=2 :
+          x=[self.columnName(0)]  
+          y=[self.columnName(1)]
+        else:                                 # None,None only 1 column => x y row index and first column
+          x=['row index']
+          y=[self.columnName(0)]
+      else:
+        for name in names:                    # x,None => y = first non x column or row index
+          if name not in x:
+            y=[name]
+            break;
+          if y==None: y=['row index']
+    elif x==None:                             # None, y=> x first column if non y or row index
+      if self.columnName(0) not in y: x=[self.columnName(0)]
+      else: x=['row index']
+    # builds x-y name pairs
+    plots=[]
+    lx=len(x);ly=len(y)
+    for i in range(max(lx,ly)): plots.append([x[i % lx],y[i % ly]])
+    #% function to build columns
+    def colFunc(name,l):
+      if name=='row index': return range(l)
+      else : return self.column(name)
+    def colsFunc(namesB):
+      name1,name2=namesB
+      l=0
+      if name1=='row index':  l=len(self.column(name1))
+      elif name2=='row index':  l=len(self.column(name2))
+      return [colFunc(name1,l),colFunc(name2,l)]
+    if ___DEBUG___: print'plots = ',plots
+    # build figure
+    if not fig: fig=plt.figure(); leg=False
+    else : leg=True
+    pl1 = fig.add_subplot(111)
+    pl1.set_title(self.name())
+    xLabel=pl1.get_xlabel();yLabel=pl1.get_ylabel();
+    colorIndex=colors.index(color)
+    for i in range(len(plots)):
+      colori=colors[colorIndex]
+      xCol,yCol=colsFunc(plots[i])
+      xName,yName=plots[i]
+      if len(xLabel)!=0:  xLabel+=', ';yLabel+=', ';
+      if not type in complexTypes:
+        plt.plot(xCol,yCol,linestyle=ls, marker=marker,color=colori,label=yName+'('+xName+')')
+        xLabel+=xName;yLabel+=yName;
+      else:
+        xCol=xCol.real()
+        plt.plot(xCol,yCol.real(),linestyle='-', marker=marker,color=colori,label=yName+'('+xName+')')
+        plt.plot(xCol,yCol.imag(),linestyle='--', marker=marker,color=colori)
+        xLabel+='Re('+xName+')';yLabel+='Re('+ yName + '),Im(' + yName + ')'
+      colorIndex=(colorIndex+1) % len(colors)
+    pl1.set_xlabel(xLabel)
+    pl1.set_ylabel(yLabel)
+    if not leg : leg =len(plots)>1
+    if leg:pl1.legend()
+    plt.show()
+    return fig
+
+  #*******************************************************************************
+  # Methods to interact with a dataManager
+  # (and not directly with the dataManager frontpanel)
+  #*******************************************************************************
+
+  def dataManager(self):
+    """
+    Gets the singleton dataManager loaded in the python environment
+    """
+    return DataManager()
+
+  def toDataManager(self):
+    """
+    Ads the datacube to the dataManager
+    """
+    self.dataManager().addDatacube(self)
+
+  def plotInDataManager(self,*args,**kwargs):
+    """
+    Call dataManager.plot() with the present datacube as first parameter and any other params
+    """
+    self.dataManager().plot(self,*args,**kwargs)  # optional named parameters in version 0.4
+  
+  def defineDefaultPlot(self,x,y):
+    """
+    Adds a [x,y] pair of column names to the list of default plots of the datacube.
+    This datacube property is used by the the datamanager frontend.
+    """
+    if self._parameters.has_key("defaultPlot"):
+      self._parameters["defaultPlot"].append([x,y])
+    else:
+      self._parameters["defaultPlot"]= [[x,y]]
+
+  #*******************************************************************************
+  # Methods to interact with Igor software 
+  #*******************************************************************************
+  
+  def sendToIgor(self,path="root:"):
+    igorCom=IgorCommunicator()
+    igorCom._app.visible=1
+    root=igorCom._app.DataFolder("root")
+    folderName=self.name()#path+self.name()
+    while igorCom.dataFolderExists(path+folderName):
+      print "'"+path+folderName +"' already exists"
+      i+=1
+      folderName=self.name()+"-"+str(i)
+
+    igorCom.createDataFolder(path+"'"+folderName+"'")
+
+    for column in self._meta["fieldNames"]:
+      igorCom("Make /N=%i/D/O %s'%s':'%s'"%(len(self[column]),path,folderName,column))
+      wave=root.Wave("%s'%s':%s"%(path,folderName,column))
+      for i in range(0,len(self[column])):
+        wave.SetNumericWavePointValue(i,self[column][i])
+    filenameVariable="%s'%s':%s"%(path,folderName,"filename")
+    igorCom(["String %s"%filenameVariable])
+    igorCom([filenameVariable+"=\"%s\""%string.replace(self.filename(),"\\",":")])
+
+    for c in self.children():
+      c.sendToIgor(path=path+"'"+self.name()+"':")
+
+    #cmd="Display %s vs %s"%("root:'"+folderName+"':'"+y+"'","root:'"+folderName+"':'"+x+"'")
+    #print cmd     
+    #igorCom(cmd)

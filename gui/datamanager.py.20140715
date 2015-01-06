@@ -1,0 +1,963 @@
+#*******************************************************************************
+# DataManager Frontpanel                                  .                    *
+#*******************************************************************************
+
+___DEBUG___ = False
+
+#**************************************
+#Imports
+
+import sys
+import getopt
+import os
+import os.path
+import weakref
+import gc
+import time
+
+from pyview.gui.coderunner import execInGui
+
+from pyview.gui.mpl.canvas import *
+reload(sys.modules['pyview.gui.mpl.canvas'])
+from pyview.gui.mpl.canvas import *
+
+
+import pyview.helpers.datamanager as dm
+from pyview.lib.datacube import *
+from pyview.lib.classes import *
+from pyview.lib.patterns import *
+from pyview.gui.datacubeview import *
+reload(sys.modules['pyview.gui.datacubeview'])
+from pyview.gui.datacubeview import *
+from pyview.gui.patterns import ObserverWidget
+from pyview.gui.graphicalCommands import *
+
+import numpy
+
+#*******************************************
+# Plugin or Helper initialization
+ 
+def startPlugin(ide,*args,**kwargs):
+  """
+  This function initializes the plugin
+  """
+  if ___DEBUG___:  print "in startPlugin"
+  if hasattr(ide,"instrumentsTab"):
+    ide.tabs.removeTab(ide.tabs.indexOf(ide.instrumentsTab))
+  instrumentsTab = InstrumentsPanel()
+  ide.instrumentsTab = instrumentsTab
+  ide.tabs.addTab(instrumentsTab,"Instruments")
+  ide.tabs.setCurrentWidget(instrumentsTab)
+
+# Global module variable plugin
+plugin = dict()
+plugin["name"] = "Data Manager"
+plugin["version"] = "0.3"
+plugin["author.name"] = "Andreas Dewes-V. Schmitt - D. Vion"
+plugin["author.email"] = "andreas.dewes@gmail.com"
+plugin["functions.start"] = startPlugin
+plugin["functions.stop"] = None
+plugin["functions.restart"] = None
+plugin["functions.preferences"] = None
+
+#********************************************
+#  utility classes
+#********************************************
+
+class cube2DPlot:
+  def __init__(self):
+    pass
+
+#********************************************
+#  Plot3DWidget class
+#********************************************
+    
+class Plot3DWidget(QWidget,ObserverWidget):
+    
+  def updatePlot(self,clear = False):
+    return
+
+  def addPlot(self,xName=None,yName=None,**kwargs):
+    return
+    
+  def clearPlots(self):
+    return
+    
+  def setCube(self,cube):
+    return
+      
+  def updateNames(self,names):
+    return
+
+  def updatedGui(self,subject = None,property = None,value = None):
+    if ___DEBUG___:  print "in Plot3DWidget.updatedGui with property ",property
+    self._updated = False
+    if property == "names":
+      if subject == self._cube:
+        self.updateNames()
+      
+  def onTimer(self):
+    return
+    
+  def showLegendStateChanged(self,state):
+    return
+    
+  def removeLine(self):
+    return
+    
+  def updateLineStyle(self,index):
+    return
+    
+  def updateLineProperties(self,index):
+    return
+    
+  def lineSelectionChanged(self,selected,previous):
+    return
+  
+  def autoplotChanged(self):
+    return
+
+  def __init__(self,parent = None):
+    QWidget.__init__(self,parent)
+    ObserverWidget.__init__(self)
+    self._cube = None
+    self._showLegend = True
+    self._plots = []
+    self._cnt = 0
+    self._lineColors = [(0,0,0),(0.8,0,0),(0.0,0,0.8),(0.0,0.5,0),(0.5,0.5,0.5),(0.8,0.5,0.0),(0.9,0,0.9)]
+    self._lineStyles = ['-','--','-.',':']
+    self._updated = False
+    self.xnames = []
+    self._currentIndex = None
+    self.ynames = []
+    self.znames = []
+    self._plottedVariables =[]
+    self.legends = []
+    self.cubes = []
+    self.timer = QTimer(self)
+    self.timer.setInterval(1000)
+    self.connect(self.timer,SIGNAL("timeout()"),self.onTimer)
+    self.timer.start()
+  
+    splitter = QSplitter(Qt.Vertical)
+    layout = QGridLayout()
+
+    self.canvas = MyMplCanvas(dpi = 72,width = 8,height = 4)
+    self.props = QWidget()
+    splitter.addWidget(self.canvas)
+    splitter.addWidget(self.props)
+    
+    propsLayout = QGridLayout()
+    propsLayout0 = QBoxLayout(QBoxLayout.LeftToRight)
+    self.xNames,self.yNames,self.zNames,self.plotType = QComboBox(),QComboBox(),QComboBox(),QComboBox()
+    self.regularGrid=QRadioButton('on regular grid');self.regularGrid.setChecked(False);self.regularGrid.setEnabled(False)
+    self.regridize=QComboBox();
+    for comboBox in [self.xNames,self.yNames,self.zNames,self.regridize]: comboBox.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+    for widget in [QLabel("X:"),self.xNames,QLabel("Y:"),self.yNames,QLabel("Z:"),self.zNames,self.regularGrid,QLabel("regularize:"),self.regridize]:
+        propsLayout0.addWidget(widget)
+    propsLayout0.addStretch()
+
+    propsLayout1 = QBoxLayout(QBoxLayout.LeftToRight)
+    self.plotType=QComboBox()
+    for type in ['2D image','Contours','Scatter','Surface','Tri-surface']: self.plotType.addItem(type)
+    self.colorModel=QComboBox()
+    for map in ['binary','gray','jet','hsv(circular)','autumn','cool']: self.colorModel.addItem(map)
+    self.plotButton = QPushButton("Add plot")
+    self.autoplot=QCheckBox("Auto plot")
+    self.clearButton = QPushButton("Clear")
+    self.autoclear=QCheckBox("Auto clear")
+    self.showLegend = QCheckBox("Show legend");self.showLegend.setCheckState(Qt.Checked)
+    for widget in [QLabel("Plot type:"),self.plotType,QLabel("Color model:"),self.colorModel,self.plotButton,self.autoplot,self.clearButton,self.autoclear,self.showLegend]:
+       propsLayout1.addWidget(widget)
+    propsLayout1.addStretch()
+
+    self.connect(self.showLegend,SIGNAL("stateChanged(int)"),self.showLegendStateChanged)
+    self.connect(self.autoplot,SIGNAL("clicked()"),self.autoplotChanged)
+    self.connect(self.plotButton,SIGNAL("clicked()"),self.addPlot)
+    self.connect(self.clearButton,SIGNAL("clicked()"),self.clearPlots)
+    
+    layout.addWidget(splitter)
+
+    propsLayout.addLayout(propsLayout0,0,0)
+    propsLayout.addLayout(propsLayout1,1,0)
+
+    self.props.setLayout(propsLayout)
+    self.setLayout(layout)
+
+#********************************************
+#  Plot2DWidget class
+#********************************************
+# general rules :
+#   - the client interacts with the dataManager only, and not with the dataManager frontpanel
+#   - the dataManager then send notifications to the frontpanel
+# The general algorithm is the following : 
+# 1) possibly add a datacube to the dataManager
+# 2) It is set as the current one, but the user can set another one from the front panel
+# 3) x and y variables selectors are automatically. An x,y pair is pre-selected but can be changed from the front panel
+# 4) The graphics and the list of plots is cleared if requested
+# 5) A plot is added to the list of plots if requested, or if autoplot is true, provided it is not already present
+# 6) Graphics is updated 
+
+
+class Plot2DWidget(QWidget,ObserverWidget):
+  
+  def nameSelector(self):
+    box = QComboBox()
+    box.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+    names = self._cube.names()
+    return box
+    
+  def updatePlot(self,clear = False):
+    if ___DEBUG___:  print "in Plot2DWidget.updatePlot"
+    if len(self._plots) == 0:
+      self.canvas.figure.clf()
+      self.canvas.axes = self.canvas.figure.add_subplot(111)
+      self.canvas.draw()
+      return
+    xnames = []
+    ynames = []
+    title = self._plots[0].cube.name()
+    legend = []
+    legendPlots = []
+    filenames = []
+    for plot in self._plots:
+      if plot.xname != "[row number]":
+        xvalues = plot.cube.column(plot.xname)
+      else:
+        xvalues = arange(0,len(plot.cube),1)
+      if plot.yname != "[row number]":
+        yvalues = plot.cube.column(plot.yname)
+      else:
+        yvalues = arange(0,len(plot.cube),1)
+
+      plot.lines.set_xdata(xvalues)
+      plot.lines.set_ydata(yvalues)
+      if not plot.xname in xnames:
+        xnames.append(plot.xname)
+      if not plot.yname in ynames:
+        ynames.append(plot.yname)
+      if not plot.cube.filename() in filenames and plot.cube.filename() != None:
+        legend.append(plot.yname+":"+plot.cube.filename()[:-4])
+        legendPlots.append(plot.lines)
+        filenames.append(plot.cube.filename())
+      #This is a bug in matplotlib. We have to call "recache" to make sure that the plot is correctly updated.
+      plot.lines.recache()
+    self.canvas.axes.set_xlabel(", ".join(xnames))
+    self.canvas.axes.set_ylabel(", ".join(ynames))
+    self.canvas.axes.set_title(title)
+    if self._showLegend and len(legend) > 0:
+      from matplotlib.font_manager import FontProperties
+      self.canvas.axes.legend(legendPlots,legend,prop = FontProperties(size = 6))
+    else:
+      self.canvas.axes.legend_ = None 
+    self.canvas.redraw()
+    
+
+  def addPlot(self,x=None,y=None,clear=False,style='line',**kwargs):
+    """
+    Adds a plot of the current datacube in self._plots with specified axes and pre-clearing if requested.
+    Add the corresponding line in the table below the graph.
+    Then calls self.updatePlot() for redrawing  
+    """
+    if ___DEBUG___: print 'in Plot2DWidget.addPlot with x=',x,', y=',y,', clear=',clear,', style= ', style, ' and current datacube = ', self._cube
+    if not self._cube :  return                       # give-up if no current datacube 
+    if self.autoclear.isChecked() or clear: self.clearPlots() # clear if autoclear
+    
+    names=self._cube.names()
+    if not x or not (x in names): x=str(self.xNames.currentText())
+    if not y or not (y in names): y=str(self.yNames.currentText())  
+                                      
+    for plot in self._plots:                          # Check if the plot is already present in the list of plots
+      if self._cube == plot.cube :
+        if plot.xname == x and plot.yname == y:
+          self.updatePlot()
+          return                                      # and just update and stop if already present
+    plot = cube2DPlot()                               # Ohterwise build the cube2DPlot 
+    plot.xname = x
+    plot.yname = y   
+    plot.cube = self._cube 
+    plot.legend = "%s, %s vs. %s" % (self._cube.name(),plot.xname,plot.yname)
+   
+    if (not style) or self.lineStyles.findText(style)==-1: style ='line'
+    plot.style = style 
+    xvalues,yvalues=[[],[]]
+    if not(((not plot.xname in self._cube.names()) and plot.xname != "[row number]") or ((not plot.yname in self._cube.names())  and plot.yname != "[row number]")):
+      if plot.xname != "[row number]":
+        xvalues = plot.cube.column(plot.xname)
+      else:
+        xvalues = arange(0,len(plot.cube),1)
+      if plot.yname != "[row number]":
+        yvalues = plot.cube.column(plot.yname)
+      else:
+        yvalues = arange(0,len(plot.cube),1)
+    plot.lines, = self.canvas.axes.plot(xvalues,yvalues,**kwargs)
+    self._cnt+=1
+    plot.cube.attach(self)
+    plot.lineStyleLabel = QLabel("line style") 
+    
+    plotItem = QTreeWidgetItem([self._cube.name(),plot.xname,plot.yname,"line"])
+    self.plotList.addTopLevelItem(plotItem)
+    self.plotList.setItemWidget(plotItem,4,plot.lineStyleLabel)
+    self.plotList.update()
+    plot.item=plotItem
+    
+    self._plots.append(plot)                           # and add it to the list self._plots
+    self.updatePlot()                                  # update the drawing
+    
+  def clearPlots(self):
+    """"
+    Clears the plots.
+    """
+    for plot in self._plots:
+      if plot.cube != self._cube:
+        plot.cube.detach(self)
+    self._plots = []
+    self._currentIndex = None
+    self.plotList.clear()
+    self._cnt = 0
+    self.updatePlot()
+    
+  def setCube(self,cube,xName=None,yName=None):
+    """"
+    Set the selected datacube, update x and y names in selectors, and call plot if autoplot
+    """
+    if ___DEBUG___:  print 'in Plot2DWidget.setCube(cube,xName,yName) with cube =',cube,' xName=',xName, ' and yName=',yName   
+    self._cube = cube 
+    found = False                 # DV does not understand this detach-attach process
+    if self._cube :
+      for plot in self._plots:
+        if self._cube == plot.cube :
+          found = True
+          break
+      if found == False:
+        self._cube.detach(self)
+      cube.attach(self)             
+    self.updateNames(xName=xName,yName=yName)               # update the variable selectors
+    if self.autoplot.isChecked():  self.addPlot()        # and plot if autoplot      
+  
+  def updateNames(self,xName=None,yName=None):  # names become optional named variables (DV April 2014).
+    """
+    Updates the x and y names in the x and y selectors, and makes a pre-selection 
+    """
+    if ___DEBUG___:  print "in Plot2DWidget.updateNames(xName,yName) with xName=",xName, ' yName=',yName, ' and datacube=',self._cube
+    currentX = self.xNames.currentText()  # memorize current selection
+    currentY = self.yNames.currentText()
+    self.xNames.clear()                   # clear the selector
+    self.yNames.clear()
+    if self._cube: 
+      self.xNames.addItem("[row number]")   # Add the 'row number' choice
+      self.yNames.addItem("[row number]")
+      names=self._cube.names()              # add all other choices from the current datacube
+      for name in names:
+        self.xNames.addItem(name,name)    
+        self.yNames.addItem(name,name)
+      # Now pre-select the xname and yname for the next plot
+      if xName and yName:                   # select the requested x and y names if correct
+        ix = self.xNames.findText(xName)
+        iy = self.yNames.findText(yName)
+        if ix != -1 and iy != -1:
+          self.xNames.setCurrentIndex(ix)
+          self.yNames.setCurrentIndex(iy)
+          return
+      if 'defaultPlot' in self._cube.parameters():   # select the first default plot if it is defined in the datacube
+        params=self._cube.parameters()["defaultPlot"][0]
+        xName,yName=params[:2]
+        ix = self.xNames.findText(xName)
+        iy = self.yNames.findText(yName)
+        if ix != -1 and iy != -1:
+          self.xNames.setCurrentIndex(ix)
+          self.yNames.setCurrentIndex(iy)
+          return                                              
+      ix = self.xNames.findText(currentX)    # else choose the previous names if they still exist
+      iy = self.yNames.findText(currentY)    
+      if ix != -1 and iy != -1:
+        self.xNames.setCurrentIndex(ix)
+        self.yNames.setCurrentIndex(iy)
+        return                                # else choose xNames[1] and yNames[2] if they exist
+      if len (self.xNames)>=2:
+        self.xNames.setCurrentIndex(1)
+        self.yNames.setCurrentIndex(2)
+      elif len (self.xNames)>=1:             # else choose xNames[0] and yNames[1] if they exist
+        self.xNames.setCurrentIndex(0)
+        self.yNames.setCurrentIndex(1)
+    if self.xNames.count()*self.xNames.count()>0  : self.addButton.setEnabled(True)
+    else: self.addButton.setEnabled(False)
+    
+  def autoplotChanged(self):
+    return
+  
+  def updatedGui(self,subject = None,property = None,value = None):     # notification listener of Plot2DWidget
+    if ___DEBUG___:  print "in Plot2DWidget.updatedGui with property ",property
+    self._updated = False
+    if property == "names":
+      if subject == self._cube:
+        self.updateNames()
+          
+  def onTimer(self):
+    if self._updated == True:
+      return
+    self._updated = True
+    self.updatePlot()
+    
+  def showLegendStateChanged(self,state):
+    if state == Qt.Checked:
+      self._showLegend = True
+    else:
+      self._showLegend = False
+    self.updatePlot()
+
+  def removeLine(self):
+    self._currentIndex = self.plotList.indexOfTopLevelItem(self.plotList.currentItem())
+    if self._currentIndex == -1 or self._currentIndex >= len(self._plots):
+      return
+    del self.canvas.axes.lines[self._currentIndex]
+    del self._plots[self._currentIndex]
+    self.plotList.takeTopLevelItem(self._currentIndex)
+    self._currentIndex = None
+    self.updatePlot(clear = True)
+    
+  def updateLineStyle(self,index):
+    self._currentIndex = self.plotList.indexOfTopLevelItem(self.plotList.currentItem())
+    if self._currentIndex == -1:
+      return
+    style = str(self.lineStyles.itemData(index).toString())
+    if self._plots[self._currentIndex].style == style:
+      return
+    if style == 'scatter':
+      self._plots[self._currentIndex].lines.set_linestyle('')
+      self._plots[self._currentIndex].lines.set_marker('o')
+    elif style == 'line':
+      self._plots[self._currentIndex].lines.set_linestyle('-')
+      self._plots[self._currentIndex].lines.set_marker('')
+    else:
+      self._plots[self._currentIndex].lines.set_linestyle('-')
+      self._plots[self._currentIndex].lines.set_marker('o')
+    self._plots[self._currentIndex].style = style
+    self.updatePlot()
+    self._plots[self._currentIndex].item.setText(3,style)
+    
+  def updateLineProperties(self,index):
+    if index < len(self._plots):
+      self.lineStyles.setCurrentIndex(self.lineStyles.findData(self._plots[index].style))
+    
+  def lineSelectionChanged(self,selected,previous):
+    if selected != None:
+      index = self.plotList.indexOfTopLevelItem(selected)
+      self._currentIndex = index
+      self.updateLineProperties(index)
+  
+  def __init__(self,parent = None,name=None):  # creator Plot2DWidget
+    QWidget.__init__(self,parent)
+    ObserverWidget.__init__(self)
+    self.name=name
+    self._cube = None
+    self._showLegend = True
+    self._plots = []
+    self._cnt = 0
+    self._lineColors = [(0,0,0),(0.8,0,0),(0.0,0,0.8),(0.0,0.5,0),(0.5,0.5,0.5),(0.8,0.5,0.0),(0.9,0,0.9)]
+    self._lineStyles = ['-','--','-.',':']
+    self._updated = False
+    self.xnames = []
+    self._currentIndex = None
+    self.ynames = []
+    self._plottedVariables =[]
+    self.legends = []
+    self.cubes = []
+    splitter = QSplitter(Qt.Vertical)
+    layout = QGridLayout()
+    self.timer = QTimer(self)
+    self.timer.setInterval(1000)
+    self.connect(self.timer,SIGNAL("timeout()"),self.onTimer)
+    self.timer.start()
+    self.props = QWidget()
+    self.canvas = MyMplCanvas(dpi = 72,width = 8,height = 4,name=name)
+
+    splitter.addWidget(self.canvas)
+    splitter.addWidget(self.props)
+    propLayout = QGridLayout()
+    self.xNames = QComboBox()
+    self.xNames.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+    self.yNames = QComboBox()
+    self.yNames.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+    self.addButton = QPushButton("Add plot")
+    self.autoplot=QCheckBox("Auto plot")
+    self.clearButton = QPushButton("Clear all")
+    self.autoclear=QCheckBox("Auto clear")
+    self.showLegend = QCheckBox("Show legend")
+    self.showLegend.setCheckState(Qt.Checked)
+
+    playout = QBoxLayout(QBoxLayout.LeftToRight)
+    playout.addWidget(QLabel("X:"))
+    playout.addWidget(self.xNames)
+    playout.addWidget(QLabel("Y:"))
+    playout.addWidget(self.yNames)
+    playout.addWidget(self.addButton)
+    playout.addWidget(self.autoplot)
+    playout.addWidget(self.clearButton)
+    playout.addWidget(self.autoclear)
+    playout.addWidget(self.showLegend)
+    playout.addStretch()
+    
+    self.connect(self.showLegend,SIGNAL("stateChanged(int)"),self.showLegendStateChanged)
+    self.connect(self.autoplot,SIGNAL("stateChanged(int)"),self.autoplotChanged)
+    self.connect(self.addButton,SIGNAL("clicked()"),self.addPlot)
+    self.connect(self.clearButton,SIGNAL("clicked()"),self.clearPlots)
+    layout.addWidget(splitter)
+    
+    self.plotList = QTreeWidget()
+    self.lineStyles = QComboBox()
+    self.lineStyles.addItem("line","line")
+    self.lineStyles.addItem("scatter","scatter")
+    self.lineStyles.addItem("line+symbol","line+symbol")
+    self.lineStyles.setSizePolicy(QSizePolicy.Maximum,QSizePolicy.Maximum)
+
+    self.plotList.setColumnCount(5)
+    self.plotList.setHeaderLabels(("Datacube","X variable","Y variable","style"))
+
+    removeButton = QPushButton("Remove line")
+    removeButton.setSizePolicy(QSizePolicy.Maximum,QSizePolicy.Maximum)
+
+    styleLabel = QLabel("Line style")
+    styleLabel.setSizePolicy(QSizePolicy.Maximum,QSizePolicy.Maximum)
+
+    linePropertiesLayout = QBoxLayout(QBoxLayout.LeftToRight)
+    linePropertiesLayout.addWidget(styleLabel)
+    linePropertiesLayout.addWidget(self.lineStyles)
+    linePropertiesLayout.addWidget(removeButton)
+    linePropertiesLayout.insertStretch(2)
+
+    self.connect(removeButton,SIGNAL("clicked()"),self.removeLine)
+    self.connect(self.plotList,SIGNAL("currentItemChanged(QTreeWidgetItem *,QTreeWidgetItem *)"),self.lineSelectionChanged)
+    self.connect(self.lineStyles,SIGNAL("currentIndexChanged(int)"),self.updateLineStyle)
+
+    propLayout.addLayout(playout,0,0)
+    propLayout.addWidget(self.plotList,1,0)
+
+    propLayout.addItem(linePropertiesLayout,2,0)
+
+    self.props.setLayout(propLayout)
+    self.setLayout(layout)
+
+#********************************************
+#  DataTreeView class
+#********************************************
+
+class DataTreeView(QTreeWidget,ObserverWidget):
+    
+  def __init__(self,parent = None):
+    QTreeWidget.__init__(self,parent)
+    ObserverWidget.__init__(self)
+    self._parent=parent
+    self._items = dict()
+    self._manager = dm.DataManager()
+    self._manager.attach(self)
+    self.setHeaderLabels(["Name"])
+    for cube in self._manager.datacubes():
+      self.addDatacube(cube,None)
+   
+  def ref(self,cube):
+    #if ___DEBUG___:  print "in DataTreeView.ref(cube) with cube =",cube,' ref(cube) =',weakref.ref(cube)
+    return weakref.ref(cube)
+
+  def contextMenuEvent(self, event):    
+    menu = QMenu(self)
+    saveAsAction = menu.addAction("Save as...")
+    removeAction = menu.addAction("Remove")
+    markAsGoodAction = menu.addAction("Mark as Good")
+    markAsBadAction = menu.addAction("Mark as Bad")
+    action = menu.exec_(self.viewport().mapToGlobal(event.pos()))
+    if action == saveAsAction:
+      if self._parent!=None: self._parent.saveCubeAs()
+    elif action== removeAction:
+      if self._parent!=None: self._parent.removeCube()
+    elif action == markAsGoodAction:
+      if self._parent!=None: self._parent.markAsGood()
+    elif  action== markAsBadAction:
+      if self._parent!=None: self._parent.markAsBad()
+
+  def selectCube(self,cube):
+    if ___DEBUG___:  print "in DataTreeView.selectCube(datacube) with datacube =",cube
+    if self.ref(cube) in self._items:
+      item = self._items[self.ref(cube)]
+      self.setCurrentItem(item)
+
+  def addCube(self,cube,parent):
+    if ___DEBUG___:  print "in DataTreeView.addCube(datacube) with datacube =",cube, 'and parent =',parent
+    if self.ref(cube) in self._items:
+      return
+    item = QTreeWidgetItem()
+    item.setText(0,str(cube.name()))
+    item._cube = self.ref(cube)
+    cube.attach(self)
+    self._items[self.ref(cube)]= item
+    if parent == None:
+      self.insertTopLevelItem(0,item)
+    else:
+      self._items[self.ref(parent)].addChild(item)
+    for child in cube.children():
+      self.addCube(child,cube)
+    # self.selectCube(cube)   # dangerous because changes the active datacube in the datatreeview while a user possibly uses it
+      
+  def removeItem(self,item):
+    if ___DEBUG___:  print "in DataTreeView.removeItem(item) with item =",item
+    if item.parent() == None:
+      self.takeTopLevelItem(self.indexOfTopLevelItem(item))
+    else:
+      item.parent().removeChild(item)  
+  
+  def removeCube(self,cube,parent):
+    if ___DEBUG___:  print "in DataTreeView.removecube(datacube) with datacube =",cube
+    if parent == None:
+      item = self._items[self.ref(cube)]
+      self.takeTopLevelItem(self.indexOfTopLevelItem(item))
+    else:
+      item = self._items[self.ref(parent)]
+      child = self._items[self.ref(cube)]
+      item.takeChild(item.indexOfChild(child))
+    del self._items[self.ref(cube)]
+    cube.detach(self)
+    
+  def updateCube(self,cube):
+    if ___DEBUG___:  print "in DataTreeView.updatecube(cube) with cube =",cube
+    item = self._items[self.ref(cube)]
+    item.setText(0,cube.name())          
+      
+  def initTreeView(self):
+    if ___DEBUG___:  print "in DataTreeView.initTreeView()"
+    self.clear()
+    dataManager = dm.DataManager()
+    for cube in dataManager.datacubes():
+      self.addCube(cube,None)
+
+    
+  def updatedGui(self,subject,property = None,value = None):
+    if ___DEBUG___:  print "in DataTreeView.updatedGui with property =",property,' and value =',value
+    if property == "addDatacube":
+      self.addCube(value,None)
+    elif property == "addChild":
+      child = value
+      self.addCube(child,subject)
+    elif property == "name":
+      self.updateCube(subject)
+    elif property == "removeChild":
+      self.removeCube(value,subject)
+    elif property == "removeDatacube":
+      self.removeCube(value,None)
+
+#********************************************
+#  DatacubeProperties class
+
+class DatacubeProperties(QWidget,ObserverWidget):
+  
+  def updateBind(self):
+    name = str(self.bindName.text())
+    self._globals[name] = self._cube
+  
+  def __init__(self,parent = None,globals = {}):
+    QWidget.__init__(self,parent)
+    ObserverWidget.__init__(self)
+    layout = QGridLayout()
+    
+    self._globals = globals
+    self._cube = None
+    self.name = QLineEdit()
+    self.filename = QLineEdit()
+    self.filename.setReadOnly(True)
+    self.tags = QLineEdit()
+    self.description = QTextEdit()
+
+    self.parameters = QTableWidget()
+    self.parameters.setRowCount(20);
+    self.parameters.setColumnCount(2);
+    self.parameters.setHorizontalHeaderLabels(['Param.','Value'])
+    self.parameters.setColumnWidth (0, 100)
+    self.parameters.setColumnWidth (1, 200)
+    self.parameters.setEditTriggers(QAbstractItemView.AllEditTriggers)
+
+    self.bindName = QLineEdit()
+    self.updateBindButton = QPushButton("Update / Set")
+    self.updateBindButton.setSizePolicy(QSizePolicy.Maximum,QSizePolicy.Maximum)
+    self.connect(self.updateBindButton,SIGNAL("clicked()"),self.updateBind)
+    
+    #font = self.description.currentFont()
+    #font.setPixelSize(12)
+    #self.description.setFont(font  )
+    
+    subLayout1=QBoxLayout(QBoxLayout.LeftToRight)
+    subLayout1.setSpacing(4)
+    subLayout1.addWidget(QLabel("Name"))
+    subLayout1.addWidget(self.name)
+    subLayout1.addWidget(QLabel(" Bind to local variable:"))
+    subLayout1.addWidget(self.bindName)
+    subLayout1.addWidget(self.updateBindButton)
+    layout.addItem(subLayout1)
+
+    layout.addWidget(QLabel("Filename"))
+    layout.addWidget(self.filename)
+    layout.addWidget(QLabel("Tags"))
+    layout.addWidget(self.tags)
+
+    subLayout2= QGridLayout()
+    subLayout2.setSpacing(4) 
+    subLayout2.addWidget(QLabel("Description"),0,0)
+    subLayout2.addWidget(self.description,1,0)
+    subLayout2.addWidget(QLabel("parameters"),0,1)
+    subLayout2.addWidget(self.parameters,1,1)
+    layout.addItem(subLayout2)
+
+    self.connect(self.name,SIGNAL("textEdited(QString)"),self.nameChanged)
+    self.connect(self.tags,SIGNAL("textEdited(QString)"),self.tagsChanged)
+    self.connect(self.description,SIGNAL("textChanged()"),self.descriptionChanged)
+    self.setLayout(layout)
+        
+  def descriptionChanged(self):
+    if self._cube == None:
+      return
+    if self._cube.description() != self.description.toPlainText():
+      self._cube.setDescription(self.description.toPlainText())
+    
+  def nameChanged(self,text):
+    if self._cube == None:
+      return
+    self._cube.setName(self.name.text())
+
+  def tagsChanged(self,text):
+    if self._cube == None:
+      return
+    self._cube.setTags(self.tags.text())
+      
+  def setCube(self,cube):
+    if ___DEBUG___:  print "in DatacubeProperties.setCube(cube) with cube = ",cube
+    if not self._cube == None:  self._cube.detach(self)
+    self._cube = cube
+    if not self._cube == None: self._cube.attach(self)
+    self.updateProperties()
+    
+  def updateProperties(self):
+    if ___DEBUG___:  print "in DatacubeProperties.updateProperties()"
+    filename=name=tags=description=''
+    if self._cube != None:
+      filename=str(self._cube.filename());
+      name=str(self._cube.name())
+      tags=str(self._cube.tags())
+      description=str(self._cube.description())
+      self.setEnabled(True)
+    else: self.setEnabled(False)  
+    self.filename.setText(filename)
+    self.name.setText(name)
+    self.tags.setText(tags)
+    self.description.setPlainText(description)
+    
+#*******************************************************
+# This is the frontend for the data manager class.
+
+class DataManager(QMainWindow,ObserverWidget):
+  
+  def selectCube(self,current,last):
+    if ___DEBUG___: print 'in DataManager.selectCube with current =',current,' and last=',last
+    if current == None: self._cube=None
+    else:
+      self._cube = current._cube() 
+      if self._cube == None: self.cubeList.removeItem(current) 
+    cube=self._cube
+    self.props.setCube(cube)
+    self.cubeViewer.setDatacube(cube)
+    self.plotter2D.setCube(cube)    
+          
+  def updatedGui(self,subject = None,property = None,value = None):
+    if ___DEBUG___:  print "in DataManager.updatedGui with property ",property,' and value=',value
+    if subject == self.manager and property == "plot":
+      cube=value[0][0]
+      kwargs=value[1]
+      self.cubeList.selectCube(cube)
+      self.tabs.setCurrentWidget(self.plotter2D)
+      self.plotter2D.addPlot(**kwargs)
+        
+  def workingDirectory(self):
+    if self._workingDirectory == None: 
+      return os.getcwd()
+    return self._workingDirectory
+    
+  def setWorkingDirectory(self,filename):
+    if filename != None:
+      directory = os.path.dirname(str(filename))
+      self._workingDirectory = directory
+    else:
+      self._workingDirectory = None
+  
+  
+  def loadCube(self):
+    if ___DEBUG___:  print "in DataManager.loadCube()"
+    filename = QFileDialog.getOpenFileName(filter = "Datacubes (*.par)",directory = self.workingDirectory())
+    if not filename == '':
+      self.setWorkingDirectory(filename)
+      cube = Datacube()
+      cube.loadtxt(str(filename))
+      self.manager.addDatacube(cube)
+      #self.cubeViewer.setDatacube(cube) # how does it go to the cubeList ?
+
+  def removeCube(self):
+    if ___DEBUG___:  print "in DataManager.removeCube()"
+    if self._cube == None:
+      return
+    manager = dm.DataManager()
+    if self._cube in manager.datacubes():
+      print "Removing from data manager..."
+      manager.removeDatacube(self._cube)
+    elif self._cube.parent() != None:
+      self._cube.parent().removeChild(self._cube)
+    self._cube = None
+    
+  def newCube(self):
+    if ___DEBUG___:  print "in DataManager.newCube()"
+    manager = dm.DataManager()
+    cube = Datacube()
+    cube.set(a =0,b = 0)
+    cube.commit()
+    manager.addDatacube(cube)
+
+
+  def saveCubeAs(self):
+    self.saveCube(saveAs = True)
+        
+  def markAsBad(self):
+    if userAsk("Are you sure ?",timeOut=5,defaultValue=False):
+      if self._cube == None:
+        return
+      try:
+        self._cube.erase()
+      except:
+        pass
+      workingDir = os.getcwd()
+      subDir = os.path.normpath(workingDir+"/bad_data")
+      if not os.path.exists(subDir):
+        os.mkdir(subDir)
+      if "badData" in self._cube.parameters() and self._cube.parameters()["badData"] == True:
+        messageBox = QMessageBox(QMessageBox.Information,"Already marked, returning...")
+        messageBox.exec_()
+        return
+      self.removeCube()
+      self._cube.savetxt(os.path.normpath(subDir+"/"+self._cube.name()))
+      self._cube.parameters()["badData"] = True
+      messageBox = QMessageBox(QMessageBox.Information,"Data marked as bad","The data has been marked and moved into the subfolder \"bad_data\"")
+      messageBox.exec_()
+      
+  def markAsGood(self):
+    if self._cube == None:
+      return
+    workingDir = os.getcwd()
+    subDir = os.path.normpath(workingDir+"/good_data")
+    if not os.path.exists(subDir):
+      os.mkdir(subDir)
+    if "goodData" in self._cube.parameters() and self._cube.parameters()["goodData"] == True:
+      messageBox = QMessageBox(QMessageBox.Information,"Already marked, returning...")
+      messageBox.exec_()
+      return
+    self._cube.savetxt(os.path.normpath(subDir+"/"+self._cube.name()))
+    self._cube.parameters()["goodData"] = True
+    messageBox = QMessageBox(QMessageBox.Information,"Data marked as good","The data has been marked and copied into the subfolder \"good_data\"")
+    messageBox.exec_()
+
+  def saveCube(self,saveAs = False):
+    if self._cube == None:
+      return
+    if self._cube.filename() == None or saveAs:
+      filename = QFileDialog.getSaveFileName(filter = "Datacubes (*.par)",directory = self.workingDirectory())
+      if filename != "":
+        self.setWorkingDirectory(filename)
+        self._cube.savetxt(str(filename))
+    else:
+      self._cube.savetxt()
+  
+  def sendToIgor(self):
+    """
+    Send the selected datacube to igor
+    """
+    self._cube.sendToIgor()
+
+  def __init__(self,parent = None,globals = {}):  # creator of the frontpanel
+    if ___DEBUG___:  print "in dataManager frontpanel creator"
+    QMainWindow.__init__(self,parent)
+    ObserverWidget.__init__(self)
+
+    self.manager = dm.DataManager()
+    self.manager.attach(self)
+    self._globals = globals
+    
+    self._workingDirectory = None
+    
+    self.setStyleSheet("""
+    QTreeWidget:Item {padding:6;} 
+    QTreeView:Item {padding:6;}""")
+
+    self.setWindowTitle("Data Manager plugin version "+plugin["version"])
+    self.setAttribute(Qt.WA_DeleteOnClose,True)
+
+    splitter = QSplitter(Qt.Horizontal)
+
+    self.cubeList = DataTreeView(parent=self)
+    self.cubeViewer = DatacubeTableView()
+    self.connect(self.cubeList,SIGNAL("currentItemChanged(QTreeWidgetItem *,QTreeWidgetItem *)"),self.selectCube)
+    self.plotter2D = Plot2DWidget(name="Data plot 1")
+    self.plotter3D = Plot3DWidget()
+    self.tabs = QTabWidget() 
+    self._cube = None
+    
+    leftLayout = QGridLayout()
+    
+    leftLayout.addWidget(self.cubeList)
+    
+    leftWidget = QWidget()
+    leftWidget.setLayout(leftLayout)
+    
+    splitter.addWidget(leftWidget)
+    splitter.addWidget(self.tabs)
+    menubar = self.menuBar()
+    filemenu = menubar.addMenu("File")
+    
+    newCube = filemenu.addAction("New")
+    removeCube = filemenu.addAction("Remove")
+    filemenu.addSeparator()
+    loadCube = filemenu.addAction("Open...")
+    saveCube = filemenu.addAction("Save")
+    saveCubeAs = filemenu.addAction("Save as...")
+    filemenu.addSeparator()
+    markAsGood = filemenu.addAction("Mark as Good")
+    markAsBad = filemenu.addAction("Mark as Bad")
+    filemenu.addSeparator()
+    sendToIgor=filemenu.addAction("Send to IgorPro")    
+
+    self.connect(loadCube,SIGNAL("triggered()"),self.loadCube)
+    self.connect(newCube,SIGNAL("triggered()"),self.newCube)
+    self.connect(saveCube,SIGNAL("triggered()"),self.saveCube)
+    self.connect(saveCubeAs,SIGNAL("triggered()"),self.saveCubeAs)
+    self.connect(removeCube,SIGNAL("triggered()"),self.removeCube)
+    self.connect(markAsGood,SIGNAL("triggered()"),self.markAsGood)
+    self.connect(markAsBad,SIGNAL("triggered()"),self.markAsBad)
+    self.connect(sendToIgor,SIGNAL("triggered()"),self.sendToIgor)
+    
+    menubar.addMenu(filemenu)
+
+    self.setCentralWidget(splitter)
+    self.props = DatacubeProperties(globals = globals)
+    self.tabs.addTab(self.props,"Properties")
+    self.tabs.addTab(self.cubeViewer,"Table View")
+    self.tabs.addTab(self.plotter2D,self.plotter2D.name+" (2D)")
+    self.tabs.addTab(self.plotter3D,"3D Data Plotting")
+    self.selectCube(self._cube,None)
+
+
+def startDataManager(exitWhenClosed = False):        # 3) Start the dataManger
+  if ___DEBUG___:  print "in startDataManager"
+  global dataManager
+  dataManager = DataManager()                        # call the creator of the frontpanel here
+  dataManager.show()
+  app = QApplication.instance()
+  app.setQuitOnLastWindowClosed(exitWhenClosed)
+
+def startDataManagerInGui(exitWhenClosed = False):    # 2) start the datamanager in gui
+  execInGui(lambda :startDataManager(exitWhenClosed))
+
+if __name__ == '__main__':      # 1) starts here in the module
+  startDataManagerInGui(True)
+  print "done..."
