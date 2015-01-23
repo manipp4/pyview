@@ -53,7 +53,7 @@ class ChildItem:
 #  Datacube class
 #******************************************************************************
     
-class Datacube(Subject,Observer,Reloadable,debugger):
+class Datacube(Subject,Observer,Reloadable,Debugger):
   """
   Defines  a hirarchical data storage class called datacube.           
   A datacube stores a 2-dimensional table of values of the same type in a numpy array len(self._table[self._index,:])).                                  
@@ -86,13 +86,13 @@ class Datacube(Subject,Observer,Reloadable,debugger):
   # creator 
   ######################################
   def __init__(self,*args,**kwargs):  # creator
-    debugger.__init__(self)
+    Debugger.__init__(self)
     Subject.__init__(self)
     Observer.__init__(self)
     Reloadable.__init__(self)
     self.initialize(*args,**kwargs)
   
-  def initialize(self,name = "datacube",description = "",filename = None,dtype = float64,defaults = None):    
+  def initialize(self,name = "cube",description = "",filename = None,dtype = float64,defaults = None):    
     """
     Initializes the data cube.
     """    
@@ -112,16 +112,15 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     self._meta["tags"] = ""
     self._meta["length"] = 0
     self._meta["dataType"] = dtype
-    self._meta["modificationTime"] = time.asctime()
-    self._meta["creationTime"] = time.asctime()
+    self._meta["modificationTime"] = time.time()
+    self._meta["creationTime"] =time.time()
     
     self._children = []
     self._parameters = dict()
     self._table = zeros(0)
     self._parent = None
     
-    self._changed = False
-    self._unsaved = True
+    self.setModified()
   
   def __getitem__(self,keys):
     if not hasattr(keys,'__iter__'):
@@ -143,9 +142,9 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     Sets the name of the datacube
     """
     self._meta["name"] = str(name)    
-    self.setModified()
     self.debugPrint('datacube.setName with datacube ',self.name(),' notifying "name with name=',name)
-    self.notify("name",name)  
+    self.notify("name",name)
+    self.setModified() 
     return self
   
   def parent(self):
@@ -176,7 +175,18 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     Returns the parameters dictionary of the data cube. The parameter dictionary is saved along with the datacube in a .par file.
     """
     return self._parameters
-    
+  
+  def addParameters(self,params):
+    """
+    Adds the parameters of the datacube to *params*
+    Then notify the frontpanel of the new params
+    """
+    for key in params.keys(): self._parameters[key]=params[key]
+    self.setModified()
+    self.debugPrint('datacube.addParameters with datacube ',self.name(),' notifying ""parameters"" with parameters=',params)
+    self.notify("parameters",params)
+ 
+
   def setParameters(self,params):
     """
     Sets the parameters of the datacube to *params*
@@ -257,27 +267,15 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     """
     Marks the datacube as unsaved
     """
-    self._meta["modificationTime"] = time.asctime()
+    self._meta["modificationTime"] = time.time()
     self._unsaved = True
+    self.debugPrint('modified at ',self._meta["modificationTime"])
 
   def modified(self):
     """
     Returns True if the datacube has been changed but not saved
     """
-    return self._unsaved
-
-  def setChanged(self,changed = False):
-    """
-    UNUSED: Marks the datacube as changed
-    """
-    self._changed = changed
-
-  def changed(self):
-    """
-    UNUSED: Returns True if the datacube has been changed but not saved
-    """
-    return self._changed
-    
+    return self._unsaved    
             
   def maxDepth(self,initialDepth=0):
     """
@@ -509,6 +507,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     (Combine this function with columnName(index) if necessary)
     """
     #print 'in datacube.renameColumn(',oldName,',',newName,')' 
+    self.setModified()
     fN=self._meta["fieldNames"]
     if newName==None: newName=self.newColumnName()
     if oldName in fN:
@@ -540,6 +539,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     """
     Removes several columns from the datacube, given their names or/and indices
     """
+    self.setModified()
     self.debugPrint('In ',self._meta["name"],'.removeColumns(namesOrIndices=',namesOrIndices,',notify=',notify,')')
     names=[]
     for nameOrIndex in namesOrIndices:
@@ -589,6 +589,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     PRIVATE FUNCTION called by createCol and set
     Insert new field names (i.e. column names) in self._meta["fieldNames"] and adjust accordingly the fieldMap and the cube's table.
     """
+    self.setModified()
     self.debugPrint('In ',self._meta["name"],'_addFields(nameIndexDict=',nameIndexDict,',adjustTable=',adjustTable,')')
     newField=False
     sortedNames=sorted(nameIndexDict, key=nameIndexDict.get)
@@ -615,6 +616,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     OBSOLETE AND MAINTAINED FOR COMPATIBILITY ISSUES. USE createCol INSTEAD
     Creates a new column
     """
+    self.setModified()
     index = self.index()
     self.goTo(offset)
     for value in values:
@@ -630,6 +632,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     Then sets the passed values (if any) starting from row index = offset.
     Then sends notifications if notify is true.
     """
+    self.setModified()
     self.debugPrint('In ',self._meta["name"],'createCol(name=',name,',columnIndex=',columnIndex,',offsetRow=',offsetRow,',values=',values,', notify=',notify,')')
     newField,columnIndex = self._addFields({name:columnIndex},adjustTable=False)     # Update fieldNames but wait before adjusting the table that we know adapt the length to the passed rows
     if values!=None:                          
@@ -685,6 +688,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     """
     Sets all values in the current row to 0
     """
+    self.setModified()
     if self._meta["index"] != None:
       for i in range(0,len(self._table[self._meta["index"],:])):
         self._table[self._meta["index"],i] = 0
@@ -695,6 +699,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     """
     Removes a given row from the datacube.
     """
+    self.setModified()
     if row < self._meta["length"]:
       self._table[row:-1,:] = self._table[row+1:,:] 
       self._meta["length"] -= 1
@@ -714,6 +719,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
       if notify: self.notify("commit",row)
 
   def addRow(self,notify=False):
+    self.setModified()
     self.debugPrint(self._meta["name"],'.addRow(notify=',notify,')')
     self.commit(rowIndex=len(self),gotoNextRow=False)
 
@@ -726,6 +732,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
       If commit, the current row index becomes the row after the insertion and not the last row.
       Note: changing the datacube's current row index with commit can be dangerous if several callers update the datacube simultaneously. 
     """
+    self.setModified()
     str1=''
     for key in keys:  str1=str1+key+"="+str(keys[key])+','
     self.debugPrint(self._meta["name"],'.insertRow(rowIndex=',rowIndex,',before=',before,',notify=',notify,',commit=',commit,str1,')')
@@ -752,6 +759,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     """
     Insert a series of adjacent rows before or after a given row index, or at the current index if index=None.
     """
+    self.setModified()
     str1=''
     for key in keys:  str1=str1+key+"="+str(keys[key])+','
     self.debugPrint(self._meta["name"],'.insertRows(rowIndex=',rowIndex,',before=',before,',numberOfRows=',numberOfRows,',notify=',notify,',commit=',commit,str1,')')
@@ -820,6 +828,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
       elif notify:
         self.debugPrint('datacube ',self.name(),'notifying "commit" with index=',rowIndex)
         self.notify("commit",rowIndex)
+    self._unsaved=True
 
   def setAt(self,index,**keys):
     """
@@ -845,6 +854,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     if rowIndex>=self._meta["length"]: self.extendTo(rowIndex=rowIndex,extendLength=True)
     if gotoNextRow : self._meta["index"]=rowIndex+1 # possibly 1st row outside datacube
     self.notify("commit",rowIndex)
+    self._unsaved=True
 
   def sortBy(self,column,reverse = False):
     """
@@ -909,7 +919,8 @@ class Datacube(Subject,Observer,Reloadable,debugger):
         if deleteChildCube:                          # if child cube and its descendents to be deleted
           for child2 in childCube._children:         # call recursively the function to delete descendents
             childCube.removeChild(child2._datacube,deleteChildCube = deleteChildCube)
-          del deleteChildCube                        # and delete the child cube   
+          del deleteChildCube                        # and delete the child cube
+    self._unsaved=True   
     return        
 
   def addChild(self,cube,**kwargs):
@@ -932,6 +943,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     self.debugPrint('datacube.addChild with datacube ',self.name(),' notifying "addChild" with cube=',cube)
     self.notify("addChild",cube)
     self.setModified()
+    self._unsaved=True
 
   def attributesOfChildren(self,common=False):
     """
@@ -1062,7 +1074,6 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     dataFile = h5py.File(path,"w")
     
     self.saveToHdf5Object(dataFile,saveChildren,overwrite,forceSave,verbose = verbose)
-    self._meta["modificationTime"] = os.path.getmtime(path)
     self.setFilename(path)
 
     dataFile.flush()
@@ -1093,7 +1104,8 @@ class Datacube(Subject,Observer,Reloadable,debugger):
       cube.loadFromHdf5Object(child)
       attributes = yaml.load(child.attrs["attributes"])
       self.addChild(cube,**attributes)
-      
+    self._unsaved=False
+    self._meta["modificationTime"]== os.path.getmtime(dataFile)
     return True
 
   def saveToHdf5Object(self,dataFile,saveChildren = True,overwrite = False,forceSave = False,verbose = False):
@@ -1118,7 +1130,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
         child = item.datacube()
         child.saveToHdf5Object(childFile,verbose = verbose)
         cnt+=1
-        
+
     self._unsaved = False
     return True
 
@@ -1148,99 +1160,105 @@ class Datacube(Subject,Observer,Reloadable,debugger):
       file.write(line)
     file.close()
   
-  def savetxt(self,path = None, absPath=None, saveChildren = True,overwrite = False,forceSave = False,allInOneFile = False, forceFolders=False):
+  def savetxt(self,path = None,saveChildren = True,overwrite = False,forceSave = False,newFile=True,header = False, folders=False):
     """
-    Saves the datacube to a text file
+    Saves the datacube to one or several couples of par and text files.
+    keywords arguments are
+    - path (None or any python string): relative or absolute path, or file name.
+    - saveChildren (boolean): save all levels of the datacube
+    - overwrite (boolean): if true => overwrites existing files; if false => add a free id number at the end of the names.
+    - newFile (boolean): if true => creates automatically new files if overwrites is false
+    - forceSave (boolean): save even when the file already exists and has no modifications.
+    - HeaderInTextFile (boolean): save the parameters information as a header of the data text file rather than in a separate .par file (boolean)
+    - folders (boolean): create a folder at each hyerarchy level
     """
-    self.debugPrint('datacube.savetxt with datacube name=',self.name())
+    # determine path and filenames
+    self.debugPrint('datacube.savetxt(',self.name(),') with overwrite=',overwrite,'newFile=',newFile)
     if path == None and self.filename() != None:
       path = self.filename()
-      overwrite = True
+      #overwrite = True # removed by DV in Jan 2015
     elif path == None and self.name() != None:
       path = self.name()
     if path == None:
-      raise Exception("You must supply a filename!")
-    
+      raise Exception("You must supply a filename!") 
     path = re.sub(r"\.[\w]{3}$","",path)
     directory = os.path.abspath(os.path.dirname(path))
     filename = os.path.split(path)[1]
     filename = self._sanitizeFilename(filename)
-    #We determine the basename of the file to which we want to save the datacube.
     basename = filename
-    self.debugPrint('directory=',directory,' and baseName=',basename)
-    
-    cnt = 1
-    if overwrite == False:
-      while os.path.exists(directory+"/"+basename+".txt"):
-        basename = filename+"-"+str(cnt)
-        cnt+=1
-
+    if not overwrite:
+      if os.path.exists(directory+"/"+basename+".txt"):
+        if newFile:
+          cnt = 1
+          while os.path.exists(directory+"/"+basename+".txt"):
+            basename = filename+"-"+str(cnt)
+            cnt+=1
+        else:
+          print "FILE(s) NOT SAVED: overwrite existing files or create new ones forbidden. Modify overwrite and/or newFile keyword arguments."
+          return
     savename = basename+".txt"
     savepath = directory+"/"+savename
     parpath = directory+"/"+basename+".par"
 
+    self.debugPrint("directory = ",directory,' - name = ',basename)
+
+    # manage children
+    le=len(self._children)
+    direc=directory
+    if folders and le!=0:
+        direc+='/'+basename+'-children'
+        if not os.path.isdir(direc):  os.mkdir(direc)
     children=[]
-    if float(Datacube.version)>="0.3" or forceFolders:             # new version
-      if saveChildren:       
-        for i in range(0,len(self._children)):
-          item = self._children[i]
-          child = item.datacube()
-          if child.name() != None:
-            childfilename = basename+"-"+child.name()+("-%d" % (i))
-          else:
-            childfilename = basename+("-%d" % (i))
-          if absPath==None:
-            pathChild=os.path.abspath(os.path.dirname(savepath))+"/"+path+"/"+self.name()
-          else:
-            pathChild=absPath
-          print pathChild
-          if not os.path.exists(pathChild):
-            os.mkdir(pathChild)        
-          childPath = child.savetxt(absPath=pathChild,saveChildren = saveChildren,overwrite = True,forceSave = forceSave,forceFolders=forceFolders)  
-          children.append({'attributes':item.attributes(),'path':childPath})
-      if os.path.exists(savepath) and os.path.getmtime(savepath) <= self._meta["modificationTime"] and os.path.exists(parpath) and os.path.getmtime(parpath) <= self._meta["modificationTime"]:
-        if self._unsaved == False and forceSave == False:
-          return basename
-    else:                                                         # old version
-      if saveChildren:
-        for i in range(0,len(self._children)):
-          item = self._children[i]
-          child = item.datacube()
-          if child.name() != None:
-            childfilename = basename+"-"+child.name()+("-%d" % (i))
-          else:
-            childfilename = basename+("-%d" % (i))
-          childPath = child.savetxt(directory+"/"+childfilename,saveChildren = saveChildren,overwrite = True,forceSave = forceSave)
-          children.append({'attributes':item.attributes(),'path':childPath})
-      if os.path.exists(savepath) and os.path.getmtime(savepath) <= self._meta["modificationTime"] and os.path.exists(parpath) and os.path.getmtime(parpath) <= self._meta["modificationTime"]:
-        if self._unsaved == False and forceSave == False:
-          return basename
-
-    #We save the datacube itself
-
-    self.setFilename(parpath)
+    for i in range(0,le):
+      item = self._children[i]
+      child = item.datacube()
+      childname=child.name()
+      if childname == None: childname='child'
+      childfilename =childname+'-'+str(i)
+      childfilename=basename+"-"+childfilename
+      
+      self.debugPrint('calling recursively savetxt for child',childfilename)
+      childPath = child.savetxt(direc+"/"+childfilename,saveChildren=saveChildren,overwrite=overwrite,newFile=newFile,forceSave=forceSave,header=header,folders=folders)
+      if folders : childPath=basename+'-children'+'/'+childPath
+      children.append({'attributes':item.attributes(),'path':childPath})
     
-    paramsDict = dict()
-    paramsDict['version'] = Datacube.version
-    paramsDict['meta'] = copy.copy(self._meta)
-    paramsDict['parameters'] = self.parameters()
-    paramsDict['children'] = children
-    paramsDict['tablefilename'] = savename
+    save=True
+    if os.path.exists(savepath) and os.path.exists(parpath):
+        self.debugPrint('unsaved, par file, txt file and cube modification times =',self._unsaved,' , ',os.path.getmtime(parpath),' , ',os.path.getmtime(savepath),' , ',float(self._meta["modificationTime"]))
+        #save= self._unsaved or (os.path.getmtime(parpath)+0.1 < float(self._meta["modificationTime"])) or (os.path.getmtime(savepath)+0.1 < float(self._meta["modificationTime"]))
+        save= self._unsaved
+    self.debugPrint('file either does not exist or is old = ',save)
+    
+    #We save the datacube itself
+    
+    if save or forceSave:
 
-    paramstxt = yaml.dump(paramsDict)
+      lastModif=self._meta["modificationTime"]
+      self.setFilename(parpath)
+      
+      paramsDict = dict()
+      paramsDict['version'] = Datacube.version
+      paramsDict['meta'] = copy.copy(self._meta)
+      paramsDict['parameters'] = self.parameters()
+      paramsDict['children'] = children
+      paramsDict['tablefilename'] = savename
 
-    if not allInOneFile:
-      params = open(parpath,"w")
-      params.write(paramstxt)
-      params.close()
-      self.saveTable(savepath)
-    else:
-      lines = paramstxt.split("\n")
-      paramstxt = "#"+"\n#".join(lines)
-      self.saveTable(savepath,header = paramstxt)
+      paramstxt = yaml.dump(paramsDict)
 
-    self._unsaved = False
-    self._meta["modificationTime"] = os.path.getmtime(savepath)
+      if not header:
+        params = open(parpath,"w")  # save the .par file
+        params.write(paramstxt)
+        params.close()
+        self.debugPrint(parpath,' saved')
+        self.saveTable(savepath)    # save the .txt file
+      else:
+        lines = paramstxt.split("\n")
+        paramstxt = "#"+"\n#".join(lines)
+        self.saveTable(savepath,header = paramstxt)
+        self.debugPrint(savepath,' saved')
+
+      self._meta["modificationTime"]=lastModif
+      self._unsaved = False
 
     return basename
   
@@ -1345,7 +1363,7 @@ class Datacube(Subject,Observer,Reloadable,debugger):
           except:
             self.removeChild(datacube)
             print "cannot load 1 datacube"
-      elif float(Datacube.version)>=0.2:                   
+      elif float(self.version)>=0.2:                   
         for child in data['children']:
           try:
             datacube = Datacube()
@@ -1361,9 +1379,9 @@ class Datacube(Subject,Observer,Reloadable,debugger):
     tableFilename = directory+"/"+data['tablefilename']
 
     self.loadTable(tableFilename,guessStructure = guessStructure)
-    self._meta["modificationTime"] = os.path.getmtime(directory+"/"+data['tablefilename'])
-
     self.setFilename(directory+"/"+filename+".par")
+    self._unsaved=False
+    self._meta["modificationTime"] = os.path.getmtime(tableFilename)
 
   #*******************************************************************************
   # Methods to plot in a Matplotlib figure

@@ -4,13 +4,31 @@ from PyQt4.QtCore import *
 
 from pyview.gui.patterns import ObserverWidget
 import pyview.helpers.instrumentsmanager 
+from pyview.lib.classes import Debugger
 
-class FrontPanel(QMainWindow,QWidget,ObserverWidget):
+class FrontPanel(Debugger,QMainWindow,QWidget,ObserverWidget):
   
   """
   A QT instrument frontpanel class depending on classes QMainWindow,QWidget, and ObserverWidget defined in pyview.gui.patterns.
   """
   
+  def __init__(self,instrument,parent=None):
+    Debugger.__init__(self)
+    QMainWindow.__init__(self,parent)
+    self.qw=QWidget(parent)
+    self.setCentralWidget(self.qw)
+    menubar=self.menuBar()
+    myMenu=menubar.addMenu("&File")
+    reloadCommand=myMenu.addAction("Reload instrument")
+    reloadCommand=myMenu.addAction("Save state")
+    restoreStateCommand=myMenu.addAction("Restore state")
+    self.connect(reloadCommand,SIGNAL("triggered()"),self.reloadInstrument)
+    self.connect(reloadCommand,SIGNAL("triggered()"),self.saveState)
+    self.connect(restoreStateCommand,SIGNAL("triggered()"),self.restoreState)
+    ObserverWidget.__init__(self)
+    self.setInstrument(instrument)
+    self._manager=pyview.helpers.instrumentsmanager.Manager()
+
   def setInstrument(self,instrument):
     """
     Set the instrument variable of the frontpanel.
@@ -50,22 +68,5 @@ class FrontPanel(QMainWindow,QWidget,ObserverWidget):
     if filename != "":
       self._manager.loadAndRestoreState(filename=filename,instruments=[self.instrument.name()])
     self
-
-
-  def __init__(self,instrument,parent=None):
-    QMainWindow.__init__(self,parent)
-    self.qw=QWidget(parent)
-    self.setCentralWidget(self.qw)
-    menubar=self.menuBar()
-    myMenu=menubar.addMenu("&File")
-    reloadCommand=myMenu.addAction("Reload instrument")
-    reloadCommand=myMenu.addAction("Save state")
-    restoreStateCommand=myMenu.addAction("Restore state")
-    self.connect(reloadCommand,SIGNAL("triggered()"),self.reloadInstrument)
-    self.connect(reloadCommand,SIGNAL("triggered()"),self.saveState)
-    self.connect(restoreStateCommand,SIGNAL("triggered()"),self.restoreState)
-    ObserverWidget.__init__(self)
-    self.setInstrument(instrument)
-    self._manager=pyview.helpers.instrumentsmanager.Manager()
 
 

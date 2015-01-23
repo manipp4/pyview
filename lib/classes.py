@@ -20,14 +20,40 @@ try:
 except:
   print "Cannot import Visa!"
 
-DEBUG = False
-
 from pyview.lib.patterns import *
 
-class Instrument(ThreadedDispatcher,Reloadable,object):
-  
+class Debugger:
+  """
+  Class Debugger.
+  Allows to set a derived class in debugging mode so that it prints messages using debugPrint()
+  """
+  def __init__(self):
+    self._debugging = False
+
+  def debugOn(self):
+    self._debugging = True
+
+  def debugOff(self):
+    self._debugging = False
+    
+  def isDebugOn(self):
+    return self._debugging
+
+  def debugPrint(self,*args):
+    if self._debugging:
+      for arg in args: print arg,
+      print
+
+class Instrument(Debugger,ThreadedDispatcher,Reloadable,object):
+  """
+  The generic insrument class (parent of ThreadedDispatcher).
+  Has a name and a list of state dictionary
+  Public properties: daemon
+  Public methods: name,parameters,saveState,pushState,popState,restoreState
+  """
   def __init__(self,name = ""):
     Subject.__init__(self)
+    Debugger.__init__(self)
     ThreadedDispatcher.__init__(self)
     self._name = name
     self._states = []
@@ -40,9 +66,19 @@ class Instrument(ThreadedDispatcher,Reloadable,object):
   def __str__(self):
     return "Instrument \"%s\"" % self.name()
     
+  def name(self):
+    return self._name
+
+  def parameters(self):
+    """
+    Overide this function to return all relevant instrument parameters in a dictionary.
+    """
+    return dict()
+
   def saveState(self,name):
     """
     Saves the state of the instrument.
+    Empty method to be overridden.
     """
     return None
     
@@ -63,16 +99,7 @@ class Instrument(ThreadedDispatcher,Reloadable,object):
     For other instruments, "state" could contain all relevant instrument parameters in a dictionary.
     """
     pass
-    
-  def name(self):
-    return self._name
-  
-  def parameters(self):
-    """
-    Redefine this function to return all relevant instrument parameters in a dictionary.
-    """
-    return dict()
-          
+                
 class VisaInstrument(Instrument):
 
     """
@@ -130,9 +157,12 @@ class VisaInstrument(Instrument):
           return attr
       raise AttributeError("No such attribute: %s" % name)
 
-import pickle
+import pickle  # implements an algorithm for turning an arbitrary Python object into a series of bytes (or chars) or vice and versa.
 import cPickle
 from struct import pack,unpack
+
+
+_DEBUG=True
 
 class Command:
 
@@ -140,6 +170,9 @@ class Command:
     self._name = name
     self._args = args
     self._kwargs = kwargs
+
+  def __str__(self):
+    return str([self._name,self._args,self._kwargs])
     
   def name(self):
     return self._name
@@ -151,23 +184,25 @@ class Command:
     return self._kwargs
 
   def toString(self):
-    pickled = cPickle.dumps(self,cPickle.HIGHEST_PROTOCOL)
+    pickled = cPickle.dumps(self,cPickle.HIGHEST_PROTOCOL)  # encode the Python object into a string of bytes (or equivalently chars)
     s = pack("l",len(pickled))
     return s+pickled
 
-  @classmethod
+  @classmethod # decorator. Why using this here? It is not reused by other methods. Not clear...
   def fromString(self,string):
-    m = cPickle.loads(string)
-    return m
-    
+    m = cPickle.loads(string) # decode the string as a Python object
+    return m                  
+
 class ServerConnection:
 
   def __init__(self,ip,port):
+    if _DEBUG:  print 'in client serverConnection.__init__  with ip=',ip,'and port=',port
     self._ip = ip
     self._port = port
     self._socket = self.openConnection()
     
   def openConnection(self):
+    if _DEBUG:  print 'in client serverConnection.openConnection() with ip=',self._ip,'and port=',self._port
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt( socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -180,39 +215,51 @@ class ServerConnection:
   def port(self):
     return self._port
 
-  def _send(self,command,args = [],kwargs = {}):
+  def _send(self,commandName,args = [],kwargs = {}):
+    """
+    Method that both sends a command to an instrument server through a network socket, and receives a response from the server.
+    """
     #We set some socket options that help to avoid errors like 10048 (socket already in use...)
-    command = Command(name = command,args = args,kwargs = kwargs)
+    if _DEBUG:  print 'in client serverConnection._send() with commandName=',commandName,' args=',args, 'and kwargs=',kwargs
+    command = Command(name = commandName,args = args,kwargs = kwargs)
     sock = self._socket
     try:
-      sock.send(command.toString())
-      lendata = sock.recv(4)
-      if len(lendata) == 0:
+      sock.send(command.toString())           # sends the command as a serialized string
+      lendata = sock.recv(4)                  # reads 4 bytes to get a string containing the number of available following bytes
+      if len(lendata) == 0:                   # if no bytes areceived => connection lost
         raise Exception("Connection to server %s port %d failed." % (self._ip,self._port))
-      length = unpack("l",lendata)[0]
-      received = sock.recv(length)
+      length = unpack("l",lendata)[0]         # unpack this 4 bytes using format 'l' and keep the length to be read.
+      received = sock.recv(length)            # read length bytes 
       binary = received
-      while len(received)>0 and len(binary) < length:
+      while len(received)>0 and len(binary) < length: # if you get the beginning of the data, waits for all bytes
         received = sock.recv(length-len(binary))
         binary+=received
-      if len(binary) == 0:
+      if len(binary) == 0:                    # if you don't get anything, return
         return None
-      response = Command().fromString(binary)
-      if response == None:
+      response = Command().fromString(binary) # Now deserialize the data received to rebuild the python object
+      if response == None:                    # No response => no connection to server
         raise Exception("Connection to server %s port %d failed." % (self._ip,self._port))
-      if response.name() == "exception" and len(response.args()) > 0:
-        raise response.args()[0]
-      return response.args()[0]
+      if response.name() == "exception" and len(response.args()) > 0: 
+        raise response.args()[0]              # we receive an error from the server and raise it here on the client side
+      if _DEBUG:  print 'in client serverConnection._send() and getting response=',response
+      return response.args()[0]               # we return the valid response
     except:
-      self._socket = self.openConnection()
+      self._socket = self.openConnection()    # if an error occured anywhere we reopen the connection (it is strange because if an error occured on the distant instrument, why reopening the connection)
       raise
-    
+
+  # Any attributes other than the ServerConnection's methods above will be 'routed' to ServerConnection._send with its arguments.
   def __getattr__(self,attr):
+    if _DEBUG: print 'in client serverConnection.__getattr__() with attr=',attr
     return lambda *args,**kwargs:self._send(attr,args,kwargs)
 
-class RemoteInstrument(ThreadedDispatcher,Reloadable,object):
+class RemoteInstrument(Debugger,ThreadedDispatcher,Reloadable,object):
+  """
+  Class that represents locally a distant remote instrument, and that is able to communicate with it through a ServerConnection.
+  """
 
   def __init__(self,name,server,baseclass = None, args = [],kwargs = {},forceReload = False):
+    
+    Debugger.__init__(self)
     ThreadedDispatcher.__init__(self)
     Reloadable.__init__(self)
     server.initInstrument(name,baseclass,args,kwargs,forceReload)
@@ -222,16 +269,18 @@ class RemoteInstrument(ThreadedDispatcher,Reloadable,object):
     self._args = args
     self._kwargs = kwargs
     
-  def remoteDispatch(self,command,args = [],kwargs = {}):
+  def remoteDispatch(self,command,args = [],kwargs = {}): # sends a command to a server
+    self.debugPrint('in remoteInstrument.remoteDispatch() with command = ',command,' args=',args,' and kwargs=',kwargs)
     result =  self._server.dispatch(self._name,command,args,kwargs)
     self.notify(command,result)
     return result
     
-  def __str__(self):
+  def __str__(self):  # Standard method called when printing
     return "Remote Instrument \"%s\" on server %s:%d" % (self.name(),self._server.ip(),self._server.port())
     
   def name(self):
-    """We redefine name, since it is already defined as an attribute in Thread
+    """
+    We redefine name, since it is already defined as an attribute in Thread
     """ 
     return self.remoteDispatch("name")
 
@@ -246,21 +295,25 @@ class RemoteInstrument(ThreadedDispatcher,Reloadable,object):
     return self.remoteDispatch("__delitem__",[key])
     
   def getAttribute(self,attr):
-    return self.remoteDispatch("__getattr__",[attr])
+    return self.remoteDispatch("__getattribute__",[attr])
     
   def setAttribute(self,attr,value):
     return self.remoteDispatch("__setattr__",[attr,value])
-      
+
+  # any call remoteInstrument.method(args,kwargs) with method different from the methods above will be treated by __getattr__ below and be transformed into remoteDispatch('method',args,kwargs)
+  # but a call remoteInstrument.property is transformed into the meaningless function lambda *args,**kwargs:remoteDispatch(property,args,kwargs)
+  # one should treat differently methods and properties
   def __getattr__(self,attr):
+    self.debugPrint('in remoteInstrument.__getattr__() with attr = ',attr)
     return lambda *args,**kwargs:self.remoteDispatch(attr,args,kwargs)
   
   def __call__(self,request):
     """
-    redefinig instr(request) to instr.ask(request) for remote instruments
+    redefinig instr(requestString) to instr.ask(requestString) for remote instruments that don't work well when using instr.request
+    Example: Replace instr.methodLeve1().methodLevel2() by instr('methodLeve1().methodLevel2()')
     """
     return self.ask(request)
         
-
 class IgorCommunicator:
   """
   A class used to communicate with IgorPro using ActiveX
@@ -331,25 +384,3 @@ class IgorCommunicator:
         self("NewDataFolder "+path)
       path+=":"
     return True
-
-class debugger:
-  """
-  Class debugger.
-  Allows to set a derived class in debugging mode so that it prints messages using debugPrint()
-  """
-  def __init__(self):
-    self._debugging = False
-
-  def debugOn(self):
-    self._debugging = True
-
-  def debugOff(self):
-    self._debugging = False
-    
-  def isDebugOn(self):
-    return self._debugging
-
-  def debugPrint(self,*args):
-    if self._debugging:
-      for arg in args: print arg,
-      print

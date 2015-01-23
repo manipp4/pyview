@@ -66,10 +66,10 @@ plugin["functions.preferences"] = None
 #  DataTreeView class
 #********************************************
 
-class DataTreeView(QTreeWidget,ObserverWidget,debugger):
+class DataTreeView(QTreeWidget,ObserverWidget,Debugger):
     
     def __init__(self,parent = None):
-        debugger.__init__(self)
+        Debugger.__init__(self)
         QTreeWidget.__init__(self,parent)
         ObserverWidget.__init__(self)
         self._parent=parent
@@ -194,14 +194,14 @@ class DataTreeView(QTreeWidget,ObserverWidget,debugger):
 #********************************************
 #  DatacubeProperties class
 
-class DatacubeProperties(QWidget,ObserverWidget,debugger):
+class DatacubeProperties(QWidget,ObserverWidget,Debugger):
   
     def updateBind(self):
         name = str(self.bindName.text())
         self._globals[name] = self._cube
   
     def __init__(self,parent = None,globals = {}):
-        debugger.__init__(self)
+        Debugger.__init__(self)
         QWidget.__init__(self,parent)
         ObserverWidget.__init__(self)
         layout = QGridLayout()
@@ -347,10 +347,10 @@ class DatacubeProperties(QWidget,ObserverWidget,debugger):
 # 5) A plot is added to the list of plots if requested, or if autoplot is true, provided it is not already present
 # 6) Graphics is updated 
 
-class DataManager(QMainWindow,ObserverWidget,debugger):
+class DataManager(QMainWindow,ObserverWidget,Debugger):
 
     def __init__(self,parent = None,globals = {}):  # creator of the frontpanel
-        debugger.__init__(self)
+        Debugger.__init__(self)
         self.debugPrint("in dataManagerGUI frontpanel creator")
         QMainWindow.__init__(self,parent)
         ObserverWidget.__init__(self)
@@ -541,9 +541,9 @@ class DataManager(QMainWindow,ObserverWidget,debugger):
         if self._cube != None: 
           cube=None
           if new:
-            name0=self._cube.name()+'_child_'
+            name0='child_'
             names=[child.name() for child in self._cube.children()]
-            i=1
+            i=0
             while True:
               name=name0+str(i)
               i+=1
@@ -604,12 +604,14 @@ class DataManager(QMainWindow,ObserverWidget,debugger):
         if self._cube == None:
           return
         if self._cube.filename() == None or saveAs:
-          filename = QFileDialog.getSaveFileName(filter = "Datacubes (*.par)",directory = self.workingDirectory())
+          directory=self.workingDirectory()
+          if self._cube.name() != None : directory += '/'+self._cube.name()+'.par'
+          filename = QFileDialog.getSaveFileName(filter = "Datacubes (*.par)",directory = directory)
           if filename != "":
             self.setWorkingDirectory(filename)
-            self._cube.savetxt(str(filename))
+            self._cube.savetxt(str(filename),overwrite=True)
         else:
-          self._cube.savetxt()
+          self._cube.savetxt(overwrite=True)
   
     def sendToIgor(self):
         """

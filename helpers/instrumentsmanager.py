@@ -49,7 +49,7 @@ class InstrumentHandle:
 class Manager(Subject,Singleton):
 
   """
-  Manages the creation and reloading of instruments.
+  Manages the creation and reloading of instruments on a local machine without instrument server.
   """
 
   _initialized = False
@@ -120,11 +120,7 @@ class Manager(Subject,Singleton):
       if states.has_key(instrument):
           self.getInstrument(instrument).restoreState(states[instrument]["state"])
 
-#    self.restoreState(data)
-
-
-
-
+  #self.restoreState(data)
 
   def restoreState(self,state,withInitialization = True):
     """
@@ -163,7 +159,6 @@ class Manager(Subject,Singleton):
     except KeyError:
       return None
 
-    
   def frontPanel(self,name):
     """
     Returns the frontpanel for the given instrument.
@@ -252,8 +247,8 @@ class Manager(Subject,Singleton):
         kwargs = params["kwargs"]
       else:
         kwargs = {}
-#      if not('name' in kwargs):
-#        kwargs['name']=params['name']
+      #if not('name' in kwargs):
+      # kwargs['name']=params['name']
       if 'args' in params:
         args = params["args"]
       else:
@@ -347,14 +342,16 @@ class Manager(Subject,Singleton):
     return self._instruments.keys()
     
 class RemoteManager():
-
+  """
+  Manages the creation and reloading of instruments on a machine that has an instrument server.
+  """
   def __init__(self):
-    self._manager = Manager()
+    self._manager = Manager()           # create an instrument manager as a property of the the remoteManager (on the server side)
     
-  def __getattr__(self,attr):
-    if hasattr(self._manager,attr):
+  def __getattr__(self,attr):           # This overidden __getattr__(attr) looks for the attribute attr in self.manager rahter than in self
+    if hasattr(self._manager,attr):     # and then returns a pure fonction able to call the attribute with its parameters and return True or False
       attr = getattr(self._manager,attr)
-      return lambda *args,**kwargs:True if attr(*args,**kwargs) else False
+      return lambda *args,**kwargs : True if attr(*args,**kwargs) else False
       
   def dispatch(self,instrument,command,args = [],kwargs = {}):
     instr = self._manager.getInstrument(instrument)
@@ -366,13 +363,13 @@ class RemoteManager():
         raise
     elif command == 'evalByServer':
       return eval(*args)
-    elif hasattr(instr,command):
+    else: #elif hasattr(instr,command):
       # default behaviour initially programmed by Andreas Dewes  :
       method = getattr(instr,command)       # built instr.command
-      if callable(method):                  # if it is a function :
+      if callable(method):                  # if it is a method :
         return  method(*args,**kwargs)      #   return its evaluation with arguments  *args and **kwargs
       else:                                 # else
         return method                       #   return the object itself
-    else:  # note that this behaviour forbid the syntax instr.object.function() -> see ask case above
-      raise Exception("Unknown function name: %s" % command)
+    #else:  # note that this behaviour forbid the syntax instr.object.function() -> see ask case above
+    #  raise Exception("Unknown function name: %s" % command)
   

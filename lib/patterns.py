@@ -22,34 +22,24 @@ class Singleton(object):
                              
       return cls._instance
 
-def _async_raise(tid, excobj):
-    res = ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, ctypes.py_object(excobj))
-    if res == 0:
-        raise ValueError("nonexistent thread id")
-    elif res > 1:
-        # """if it returns a number greater than one, you're in trouble, 
-        # and you should call it again with exc=NULL to revert the effect"""
-        ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, 0)
-        raise SystemError("PyThreadState_SetAsyncExc failed")
- 
-class StopThread(Exception):
-  pass
- 
-class KillableThread(threading.Thread):
+class Reloadable(object):
+  
+  #This function dynamically reloads the module that defines the class and updates the current instance to the new class.
+  def reloadClass(self):
+    self.beforeReload()
+    print "Reloading %s" % self.__module__
+    newModule = reload(sys.modules[self.__module__])
+    self.__class__ = eval("newModule.%s" % self.__class__.__name__)
+    self.onReload()
     
-    def raise_exc(self, excobj):
-        assert self.isAlive(), "thread must be started"
-        for tid, tobj in threading._active.items():
-            if tobj is self:
-                _async_raise(tid, excobj)
-                return
-        
-        # the thread was alive when we entered the loop, but was not found 
-        # in the dict, hence it must have been already terminated. should we raise
-        # an exception here? silently ignore?
+  def beforeReload(self,*args,**kwargs):
+    pass
     
-    def terminate(self):
-        self.raise_exc(SystemExit)
+  def onReload(self,*args,**kwargs):
+    pass
+    
+  def __init__(self):
+    pass
 
 class Subject:
 
@@ -120,8 +110,44 @@ class Subject:
         raise
       finally:
         self.isNotifying = False
-        
 
+class Observer:
+
+  def __init__(self):
+    pass
+  
+  def updated(self,subject = None,property = None,value = None):   
+    pass
+
+class StopThread(Exception):
+  pass
+ 
+def _async_raise(tid, excobj):
+    res = ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, ctypes.py_object(excobj))
+    if res == 0:
+        raise ValueError("nonexistent thread id")
+    elif res > 1:
+        # """if it returns a number greater than one, you're in trouble, 
+        # and you should call it again with exc=NULL to revert the effect"""
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, 0)
+        raise SystemError("PyThreadState_SetAsyncExc failed")
+
+class KillableThread(threading.Thread):
+    
+    def raise_exc(self, excobj):
+        assert self.isAlive(), "thread must be started"
+        for tid, tobj in threading._active.items():
+            if tobj is self:
+                _async_raise(tid, excobj)
+                return
+        
+        # the thread was alive when we entered the loop, but was not found 
+        # in the dict, hence it must have been already terminated. should we raise
+        # an exception here? silently ignore?
+    
+    def terminate(self):
+        self.raise_exc(SystemExit)
+        
 class Dispatcher(Subject):
 
     def __init__(self):
@@ -203,30 +229,3 @@ class ThreadedDispatcher(Dispatcher,KillableThread):
       Dispatcher.dispatch(self,command,*args,**kwargs)
       if not self.isAlive():
         self.restart()
-
-class Observer:
-
-  def __init__(self):
-    pass
-  
-  def updated(self,subject = None,property = None,value = None):   
-    pass
-    
-class Reloadable(object):
-  
-  #This function dynamically reloads the module that defines the class and updates the current instance to the new class.
-  def reloadClass(self):
-    self.beforeReload()
-    print "Reloading %s" % self.__module__
-    newModule = reload(sys.modules[self.__module__])
-    self.__class__ = eval("newModule.%s" % self.__class__.__name__)
-    self.onReload()
-    
-  def beforeReload(self,*args,**kwargs):
-    pass
-    
-  def onReload(self,*args,**kwargs):
-    pass
-    
-  def __init__(self):
-    pass

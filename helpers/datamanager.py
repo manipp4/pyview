@@ -14,11 +14,11 @@ import traceback
 from threading import Thread
 import PyQt4.uic as uic
 
-from pyview.lib.classes import debugger
+from pyview.lib.classes import Debugger
 from pyview.lib.patterns import Singleton,Reloadable,ThreadedDispatcher,Subject,Observer
 
 #This is a class that manages datacubes
-class DataManager(Singleton,Reloadable,ThreadedDispatcher,Subject,Observer,debugger):  
+class DataManager(Singleton,Reloadable,ThreadedDispatcher,Subject,Observer,Debugger):  
   """
   The DataManager is a Singleton class which can be used to keep track of datacubes.
   Just call addDatacube() to add a datacube to the DataManager.
@@ -34,7 +34,7 @@ class DataManager(Singleton,Reloadable,ThreadedDispatcher,Subject,Observer,debug
     Observer.__init__(self)
     ThreadedDispatcher.__init__(self)
     Subject.__init__(self)
-    debugger.__init__(self)
+    Debugger.__init__(self)
     self._datacubes = []
     self._globals = globals
 

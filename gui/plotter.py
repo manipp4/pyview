@@ -36,7 +36,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 import pyview.helpers.datamanager as dm            # DATAMANAGER
 from pyview.lib.datacube import *                  # DATACUBE
-from pyview.lib.classes import debugger
+from pyview.lib.classes import Debugger
 #from pyview.lib.patterns import *
 from pyview.gui.patterns import ObserverWidget
 from pyview.gui.graphicalCommands import *
@@ -61,13 +61,13 @@ __styles3D__=['Waterfall','Image (reg)','Image (rnd)','Contours','Scatter','Surf
 __colors3D__=['binary','gray','jet','hsv','autumn','cool'];__defaultColor3D__=2
 __regridize__=['None','skip','interpolate'];__defaultRegridize__=0
 
-class PlotWidget(QWidget,ObserverWidget,debugger):
+class PlotWidget(QWidget,ObserverWidget,Debugger):
 
     def __del__(self):
         self.debugPrint("deleting ",self)
 
     def __init__(self, parent=None, name=None,threeD=False):  # creator PlotWidget
-        debugger.__init__(self)
+        Debugger.__init__(self)
         self.debugPrint("in PlotWidget.__init__(parent,name,threeD) with parent=",parent," name=",name," and threeD=",threeD)
         QWidget.__init__(self,parent)
         ObserverWidget.__init__(self)
